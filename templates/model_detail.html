@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Detail - Trigo Nexus</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .stat-card { background:#0a0a0a; border:1px solid #1a1a1a; border-radius:8px; padding:16px; }
+        .stat-label { color:#666; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:8px; }
+        .stat-value { color:#fff; font-size:18px; font-weight:700; }
+        .info-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:20px 0; }
+        .pos-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin:20px 0; }
+        .pos-card-small { background:#0a0a0a; border:1px solid #1a1a1a; border-radius:8px; padding:16px; }
+        .pos-card-small .title { display:flex; align-items:center; gap:10px; margin-bottom:12px; font-weight:700; color:#fff; }
+        .pos-card-small .field { margin:6px 0; font-size:12px; color:#999; }
+        .pos-card-small .field b { color:#fff; font-weight:600; }
+        .back-btn { background:#1a1a1a; border:1px solid #333; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; display:inline-block; margin-bottom:20px; }
+        .back-btn:hover { background:#00ff88; color:#000; border-color:#00ff88; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-container">
+            <div class="logo-area">
+                <h1 class="logo">Trigo Nexus</h1>
+            </div>
+            <nav class="main-nav">
+                <a href="/" class="nav-item">LIVE</a>
+                <span class="nav-sep">|</span>
+                <a href="/leaderboard" class="nav-item">LEADERBOARD</a>
+                <span class="nav-sep">|</span>
+                <a href="/models" class="nav-item active">MODELS</a>
+            </nav>
+        </div>
+    </header>
+
+    <div style="max-width:1400px;margin:0 auto;padding:30px 40px;">
+        <a href="/" class="back-btn">← BACK TO LIVE</a>
+        <div id="detailRoot"></div>
+    </div>
+
+    <script>
+    async function api(u){ const r=await fetch(u); return r.json(); }
+    function fn(n){ return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+    function fp(p){ if(p>=1000) return p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); if(p>=1) return p.toFixed(2); return p.toFixed(6); }
+    function coinIcon(sym){ const m={BTC:1,ETH:1027,SOL:5426,BNB:1839,DOGE:74,XRP:52};return `<img src="https://s2.coinmarketcap.com/static/img/coins/64x64/${m[sym]||1}.png" width="24" height="24" style="border-radius:50%">`; }
+
+    (async () => {
+        try{
+            const data = await api(`/api/model/${'{{ slug }}'}`);
+            const acc = data.account || {};
+            const stats = data.stats || {};
+            const positions = data.positions || [];
+            const trades = data.last_trades || [];
+            const root = document.getElementById('detailRoot');
+
+            // Logo - 添加详细调试和错误处理
+            let logoHtml = '';
+            console.log('Model name:', acc.name);
+            if (acc.name && acc.name.toUpperCase().includes('QWEN')) {
+                console.log('Loading Qwen logo');
+                logoHtml = `<img src="/static/img/ai/qwen.png?v=${Date.now()}" width="64" height="64" style="border-radius:10px;object-fit:contain;background:#fff;" onload="console.log('Qwen logo loaded')" onerror="console.error('Qwen logo failed');this.style.background='#333';this.style.display='block';">`;
+            } else if (acc.name && acc.name.toUpperCase().includes('DEEPSEEK')) {
+                console.log('Loading DeepSeek logo');
+                logoHtml = '<img src="/static/img/ai/deepseek.jpg?v=3" width="64" height="64" style="border-radius:10px;object-fit:cover;">';
+            } else {
+                console.log('Unknown model:', acc.name);
+                logoHtml = '<div style="width:64px;height:64px;background:#333;border-radius:10px;"></div>';
+            }
+
+            let h = `
+                <div style="background:#0a0a0a;border:1px solid #1a1a1a;border-radius:12px;padding:24px;margin-bottom:24px;">
+                    <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+                        ${logoHtml}
+                        <div>
+                            <h2 style="color:#fff;font-size:24px;margin:0 0 8px;">${acc.name||''}</h2>
+                            <div style="font-size:13px;color:#999;">Total Account Value: <span style="color:#fff;font-weight:700;">$${fn(acc.total_value||0)}</span> · Available Cash: <span style="color:#fff;font-weight:700;">$${fn(acc.cash||0)}</span></div>
+                        </div>
+                    </div>
+
+                    <div class="info-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">TOTAL P&L</div>
+                            <!-- ✅ 强制使用后端统一数据，不做任何前端计算 -->
+                            <div class="stat-value ${(acc.total_pnl_amount||0)>=0?'positive':'negative'}">${(acc.total_pnl_amount||0)>=0?'+':''}$${fn(Math.abs(acc.total_pnl_amount||0))}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">TOTAL FEES</div>
+                            <div class="stat-value">$${fn(acc.fees||0)}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">NET REALIZED</div>
+                            <div class="stat-value ${(acc.realized_pnl||0)>=0?'positive':'negative'}">$${fn(acc.realized_pnl||0)}</div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                        <div class="stat-card">
+                            <div class="stat-label">STATISTICS</div>
+                            <div class="field" style="margin-top:10px;">Average Leverage: <b style="color:#fff;">${(stats.avg_leverage||0).toFixed(1)}x</b></div>
+                            <div class="field">Average Confidence: <b style="color:#fff;">${((stats.avg_confidence||0)*100).toFixed(1)}%</b></div>
+                            <div class="field">Biggest Win: <b class="positive">$${fn(stats.biggest_win||0)}</b></div>
+                            <div class="field">Biggest Loss: <b class="negative">$${fn(Math.abs(stats.biggest_loss||0))}</b></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">HOLD TIMES</div>
+                            <div class="field" style="margin-top:10px;">Long: <b class="positive">${(stats.hold_times?.long||0)}%</b></div>
+                            <div class="field">Short: <b class="negative">${(stats.hold_times?.short||0)}%</b></div>
+                            <div class="field">Flat: <b style="color:#999;">${(stats.hold_times?.flat||0)}%</b></div>
+                        </div>
+                    </div>
+                </div>`;
+
+            // Active Positions
+            h += '<h3 style="color:#fff;font-size:16px;font-weight:700;margin:24px 0 16px;letter-spacing:1px;border-bottom:2px solid #1a1a1a;padding-bottom:12px;">ACTIVE POSITIONS</h3>';
+            if (positions.length){
+                h += '<div class="pos-grid">';
+                positions.forEach(p => {
+                    const cost = (p.entry_price||0)*(p.quantity||0);
+                    const value = (p.current_price||p.entry_price||0)*(p.quantity||0);
+                    const net = p.side==='long'?(value-cost):(cost-value);
+                    const pc = net>=0?'positive':'negative';
+                    h += `
+                      <div class="pos-card-small">
+                        <div class="title">${coinIcon(p.symbol)} ${p.symbol} · ${p.side==='long'?'<span class="positive">LONG</span>':'<span class="negative">SHORT</span>'} ${p.leverage}X</div>
+                        <div class="field">Entry Price: <b>$${fp(p.entry_price)}</b></div>
+                        <div class="field">Current Price: <b>$${fp(p.current_price||p.entry_price)}</b></div>
+                        <div class="field">Quantity: <b>${Number(p.quantity||0).toFixed(4)}</b></div>
+                        <div class="field">Cost: <b>$${fn(cost)}</b></div>
+                        <div class="field">Mkt Value: <b>$${fn(value)}</b></div>
+                        <div class="field">P&L: <b class="${pc}">${net>=0?'+':''}$${fn(Math.abs(net))}</b></div>
+                        <div class="field">Liquidation: <b style="color:#ff4444;">$${fp(p.liquidation_price)}</b></div>
+                      </div>`;
+                });
+                h += '</div>';
+            } else {
+                h += '<div class="empty-state">暂无持仓</div>';
+            }
+
+            // All Trades
+            h += '<h3 style="color:#fff;font-size:16px;font-weight:700;margin:24px 0 16px;letter-spacing:1px;border-bottom:2px solid #1a1a1a;padding-bottom:12px;">ALL TRADES</h3>';
+            if (trades.length){
+                h += `<div class="table-wrap"><table class="lb-table"><thead><tr>
+                        <th>STATUS</th><th>SIDE</th><th>COIN</th><th>ENTRY TIME</th><th>EXIT TIME</th><th>ENTRY PRICE</th><th>CURRENT/EXIT PRICE</th><th>QUANTITY</th><th>HOLDING TIME</th><th>NET P&L</th>
+                    </tr></thead><tbody>`;
+                trades.forEach(t => {
+                    const pc = (t.net_pnl||0)>=0?'positive':'negative';
+                    const hc = Math.max(0, t.holding_time||0);
+                    const hStr = hc>=3600?`${Math.floor(hc/3600)}H ${(Math.floor(hc/60)%60)}M`:`${Math.floor(hc/60)}M`;
+                    const entryTime = t.entry_time ? new Date(t.entry_time*1000).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+                    const exitTime = t.exit_time ? new Date(t.exit_time*1000).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '<span style="color:#ffa500;">OPEN</span>';
+                    const statusBadge = t.status === 'open' ? '<span style="background:#ffa500;color:#000;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700;">ACTIVE</span>' : '<span style="background:#555;color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700;">CLOSED</span>';
+                    h += `<tr style="${t.status === 'open' ? 'background:rgba(255,165,0,0.05);' : ''}">
+                        <td>${statusBadge}</td>
+                        <td>${t.side==='long'?'<span class="positive">LONG</span>':'<span class="negative">SHORT</span>'}</td>
+                        <td>${coinIcon(t.symbol)} ${t.symbol}</td>
+                        <td>${entryTime}</td>
+                        <td>${exitTime}</td>
+                        <td>$${fp(t.entry_price)}</td>
+                        <td>$${fp(t.exit_price)}</td>
+                        <td>${Number(t.quantity||0).toFixed(4)}</td>
+                        <td>${hStr}</td>
+                        <td class="${pc}">${t.net_pnl>=0?'+':''}$${fn(Math.abs(t.net_pnl))}</td>
+                    </tr>`;
+                });
+                h += '</tbody></table></div>';
+            } else {
+                h += '<div class="empty-state">暂无交易</div>';
+            }
+
+            root.innerHTML = h;
+        } catch(e){
+            console.error(e);
+            document.getElementById('detailRoot').innerHTML = '<div class="empty-state">加载失败：'+e.message+'</div>';
+        }
+    })();
+    </script>
+</body>
+</html>
