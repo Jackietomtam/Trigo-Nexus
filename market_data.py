@@ -5,7 +5,7 @@
 
 import time
 import json
-from urllib import request, parse, error
+import requests
 from typing import Dict, Any, List, Optional
 
 from config import (
@@ -25,18 +25,21 @@ class MarketData:
 
     # -------- Binance HTTP Helper --------
     def _binance_get(self, path: str, params: Dict[str, Any]) -> Any:
-        query = parse.urlencode(params)
         last_exc: Optional[Exception] = None
         for base in BINANCE_BASE_URLS:
-            url = f"{base}{path}?{query}"
+            url = f"{base}{path}"
             try:
-                req = request.Request(url, headers={
-                    'User-Agent': 'AlphaArena/1.0',
-                    'Accept': 'application/json'
-                })
-                with request.urlopen(req, timeout=10) as resp:
-                    data = resp.read().decode('utf-8')
-                    return json.loads(data)
+                response = requests.get(
+                    url,
+                    params=params,
+                    headers={
+                        'User-Agent': 'TrigoNexus/1.0',
+                        'Accept': 'application/json'
+                    },
+                    timeout=15  # 增加超时时间
+                )
+                response.raise_for_status()
+                return response.json()
             except Exception as e:
                 last_exc = e
                 continue
@@ -51,15 +54,21 @@ class MarketData:
             'https://fapi2.binance.com',
             'https://fapi3.binance.com'
         ]
-        query = parse.urlencode(params)
         last_exc: Optional[Exception] = None
         for base in bases:
-            url = f"{base}{path}?{query}"
+            url = f"{base}{path}"
             try:
-                req = request.Request(url, headers={'User-Agent':'AlphaArena/1.0','Accept':'application/json'})
-                with request.urlopen(req, timeout=10) as resp:
-                    data = resp.read().decode('utf-8')
-                    return json.loads(data)
+                response = requests.get(
+                    url,
+                    params=params,
+                    headers={
+                        'User-Agent': 'TrigoNexus/1.0',
+                        'Accept': 'application/json'
+                    },
+                    timeout=15
+                )
+                response.raise_for_status()
+                return response.json()
             except Exception as e:
                 last_exc = e
                 continue
