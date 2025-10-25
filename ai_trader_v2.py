@@ -6,13 +6,6 @@ import requests
 import json
 import random
 import time
-try:
-    # 可选依赖：若本地未安装 openai，也能回退到 requests 方案
-    from openai import OpenAI  # type: ignore
-    HAS_OPENAI = True
-except Exception:  # noqa: BLE001 - 广泛捕获以确保运行时不因缺少依赖而中断
-    OpenAI = None  # type: ignore
-    HAS_OPENAI = False
 from config import OPENROUTER_API_KEY, DASHSCOPE_API_KEY
 
 class AITraderV2:
@@ -274,7 +267,9 @@ Realized P&L: {realized_pnl:.2f}
             if use_dashscope:
                 # Qwen使用阿里云百炼 DashScope API（优先走OpenAI SDK；若未安装则回退requests）
                 print(f"  → {self.name} 使用DashScope API", flush=True)
-                if HAS_OPENAI and OpenAI is not None:
+                try:
+                    # 延迟导入：仅在需要时导入 OpenAI SDK
+                    from openai import OpenAI  # type: ignore
                     client = OpenAI(
                         api_key=DASHSCOPE_API_KEY,
                         base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
@@ -291,8 +286,8 @@ Realized P&L: {realized_pnl:.2f}
                     content = completion.choices[0].message.content
                     response = type('obj', (object,), {'status_code': 200})()  # 模拟response对象
                     response_json = {'choices': [{'message': {'content': content}}]}
-                else:
-                    # 回退到requests（OpenAI SDK 未安装）
+                except (ImportError, Exception):
+                    # 回退到requests（OpenAI SDK 未安装或初始化失败）
                     r = requests.post(
                         "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
                         headers={
