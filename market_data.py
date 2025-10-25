@@ -74,9 +74,40 @@ class MarketData:
                 continue
         raise RuntimeError(f"Binance FAPI请求失败: {path} {params} -> {last_exc}")
 
+    # -------- Backup: CoinGecko API --------
+    def _get_price_from_coingecko(self, symbol: str) -> tuple[float, float]:
+        """从 CoinGecko 获取价格（备选方案）"""
+        coin_ids = {
+            'BTC': 'bitcoin',
+            'ETH': 'ethereum',
+            'SOL': 'solana',
+            'BNB': 'binancecoin',
+            'DOGE': 'dogecoin',
+            'XRP': 'ripple'
+        }
+        coin_id = coin_ids.get(symbol)
+        if not coin_id:
+            raise ValueError(f"CoinGecko 不支持的币种: {symbol}")
+        
+        url = f"https://api.coingecko.com/api/v3/simple/price"
+        params = {
+            'ids': coin_id,
+            'vs_currencies': 'usd',
+            'include_24hr_change': 'true'
+        }
+        try:
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            price = float(data[coin_id]['usd'])
+            change_percent = float(data[coin_id].get('usd_24h_change', 0))
+            return price, change_percent
+        except Exception as e:
+            raise RuntimeError(f"CoinGecko请求失败: {symbol} -> {e}")
+
     # -------- Realtime Prices --------
     def get_crypto_price(self, symbol: str) -> float:
-        """获取单个加密货币的实时价格（Binance 24hr endpoint）"""
+        """获取单个加密货币的实时价格（Binance + CoinGecko 备选）"""
         current_time = time.time()
         # 每个币种独立缓存判断
         if symbol in self.prices and symbol in self.last_update and (current_time - self.last_update[symbol]) < PRICE_REFRESH_SECONDS:
@@ -86,14 +117,25 @@ class MarketData:
         if not pair:
             raise ValueError(f"不支持的币种: {symbol}")
 
-        data = self._binance_get('/api/v3/ticker/24hr', {'symbol': pair})
-        price = float(data['lastPrice'])
-        change_percent = float(data['priceChangePercent'])
+        # 先尝试 Binance
+        try:
+            data = self._binance_get('/api/v3/ticker/24hr', {'symbol': pair})
+            price = float(data['lastPrice'])
+            change_percent = float(data['priceChangePercent'])
+            print(f"✓ {symbol} Binance价格: ${price:,.2f} ({change_percent:+.2f}%)")
+        except Exception as e:
+            # Binance 失败，切换到 CoinGecko
+            print(f"⚠ {symbol} Binance失败，切换CoinGecko: {e}")
+            try:
+                price, change_percent = self._get_price_from_coingecko(symbol)
+                print(f"✓ {symbol} CoinGecko价格: ${price:,.2f} ({change_percent:+.2f}%)")
+            except Exception as e2:
+                print(f"❌ {symbol} CoinGecko也失败: {e2}")
+                raise
 
         self.prices[symbol] = price
         self.price_changes[symbol] = change_percent
         self.last_update[symbol] = current_time  # 每个币种独立时间戳
-        print(f"✓ {symbol} 真实价格: ${price:,.2f} ({change_percent:+.2f}%)")
         return price
 
     def get_all_prices(self, force_refresh: bool = False) -> Dict[str, float]:
