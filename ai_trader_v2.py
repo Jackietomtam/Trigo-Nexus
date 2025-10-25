@@ -265,48 +265,27 @@ Realized P&L: {realized_pnl:.2f}
             use_dashscope = 'qwen' in self.model.lower()
             
             if use_dashscope:
-                # Qwen使用阿里云百炼 DashScope API（优先走OpenAI SDK；若未安装则回退requests）
+                # Qwen使用阿里云百炼 DashScope API（直接使用requests）
                 print(f"  → {self.name} 使用DashScope API", flush=True)
-                try:
-                    # 延迟导入：仅在需要时导入 OpenAI SDK
-                    from openai import OpenAI  # type: ignore
-                    client = OpenAI(
-                        api_key=DASHSCOPE_API_KEY,
-                        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
-                    )
-                    completion = client.chat.completions.create(
-                        model="qwen3-max",
-                        messages=[
+                r = requests.post(
+                    "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {DASHSCOPE_API_KEY}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "qwen3-max",
+                        "messages": [
                             {"role": "system", "content": f"You are {self.name}, a professional crypto trader. Analyze market data and return your decisions in this exact JSON format: {{\"analysis\": \"your 200-400 word market analysis\", \"decisions\": {{\"BTC\": {{\"signal\": \"hold/long/short\", \"leverage\": 10, \"percentage\": 20, \"confidence\": 0.75, \"stop_loss\": 0, \"profit_target\": 0, \"invalidation_condition\": \"\", \"risk_usd\": 0}}, \"ETH\": {{...}}}}}}. Include ALL coins (BTC, ETH, SOL, BNB, DOGE, XRP) in your response. Use 'hold' for no action."},
                             {"role": "user", "content": prompt}
                         ],
-                        temperature=0.6,
-                        max_tokens=2000,
-                    )
-                    content = completion.choices[0].message.content
-                    response = type('obj', (object,), {'status_code': 200})()  # 模拟response对象
-                    response_json = {'choices': [{'message': {'content': content}}]}
-                except (ImportError, Exception):
-                    # 回退到requests（OpenAI SDK 未安装或初始化失败）
-                    r = requests.post(
-                        "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
-                        headers={
-                            "Authorization": f"Bearer {DASHSCOPE_API_KEY}",
-                            "Content-Type": "application/json"
-                        },
-                        json={
-                            "model": "qwen3-max",
-                            "messages": [
-                                {"role": "system", "content": f"You are {self.name}, a professional crypto trader. Analyze market data and return your decisions in this exact JSON format: {{\"analysis\": \"your 200-400 word market analysis\", \"decisions\": {{\"BTC\": {{\"signal\": \"hold/long/short\", \"leverage\": 10, \"percentage\": 20, \"confidence\": 0.75, \"stop_loss\": 0, \"profit_target\": 0, \"invalidation_condition\": \"\", \"risk_usd\": 0}}, \"ETH\": {{...}}}}}}. Include ALL coins (BTC, ETH, SOL, BNB, DOGE, XRP) in your response. Use 'hold' for no action."},
-                                {"role": "user", "content": prompt}
-                            ],
-                            "temperature": 0.6,
-                            "max_tokens": 2000
-                        },
-                        timeout=30
-                    )
-                    response = type('obj', (object,), {'status_code': r.status_code})()
-                    response_json = r.json() if r.status_code == 200 else {}
+                        "temperature": 0.6,
+                        "max_tokens": 2000
+                    },
+                    timeout=30
+                )
+                response = type('obj', (object,), {'status_code': r.status_code})()
+                response_json = r.json() if r.status_code == 200 else {}
             else:
                 # DeepSeek使用OpenRouter
                 print(f"  → {self.name} 使用OpenRouter API", flush=True)
