@@ -98,7 +98,6 @@ CURRENT MARKET STATE FOR ALL COINS
         
         # 技术指标（逐币种）
         import pandas as pd
-        import pandas_ta as ta
         from market_data import MarketData
         mkt = MarketData()
         
@@ -127,12 +126,30 @@ CURRENT MARKET STATE FOR ALL COINS
                 try:
                     df4 = df.resample('240min').agg({'open':'first','high':'max','low':'min','close':'last','volume':'sum'}).dropna()
                     if len(df4) >= 60:
-                        df4.ta.ema(length=20, append=True)
-                        df4.ta.ema(length=50, append=True)
-                        df4.ta.atr(length=3, append=True)
-                        df4.ta.atr(length=14, append=True)
-                        macd4 = ta.macd(df4['close'], fast=12, slow=26, signal=9)
-                        rsi4 = ta.rsi(df4['close'], length=14)
+                        # 计算指标（纯 pandas 实现）
+                        df4['EMA_20'] = df4['close'].ewm(span=20, adjust=False).mean()
+                        df4['EMA_50'] = df4['close'].ewm(span=50, adjust=False).mean()
+                        
+                        # ATR
+                        high_low = df4['high'] - df4['low']
+                        high_close = abs(df4['high'] - df4['close'].shift())
+                        low_close = abs(df4['low'] - df4['close'].shift())
+                        tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+                        df4['ATR_3'] = tr.rolling(window=3).mean()
+                        df4['ATR_14'] = tr.rolling(window=14).mean()
+                        
+                        # MACD
+                        ema12 = df4['close'].ewm(span=12, adjust=False).mean()
+                        ema26 = df4['close'].ewm(span=26, adjust=False).mean()
+                        macd4 = pd.DataFrame()
+                        macd4['MACD_12_26_9'] = ema12 - ema26
+                        
+                        # RSI
+                        delta = df4['close'].diff()
+                        gain14 = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+                        loss14 = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+                        rs14 = gain14 / loss14
+                        rsi4 = 100 - (100 / (1 + rs14))
                         
                         ema20_4 = float(df4.iloc[-1].get('EMA_20', 0)) if 'EMA_20' in df4.columns else 0.0
                         ema50_4 = float(df4.iloc[-1].get('EMA_50', 0)) if 'EMA_50' in df4.columns else 0.0

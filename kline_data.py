@@ -4,7 +4,6 @@ K线数据管理模块
 """
 
 import pandas as pd
-import pandas_ta as ta
 from collections import deque
 import time
 
@@ -70,14 +69,37 @@ class KLineData:
         if df is None or len(df) < 20:  # 降低最小要求从50到20
             return None
         
-        # 计算指标
-        df.ta.ema(length=20, append=True)
-        df.ta.ema(length=50, append=True)
-        df.ta.macd(fast=12, slow=26, signal=9, append=True)
-        df.ta.rsi(length=7, append=True)
-        df.ta.rsi(length=14, append=True)
-        df.ta.atr(length=3, append=True)
-        df.ta.atr(length=14, append=True)
+        # 计算指标（纯 pandas 实现）
+        # EMA
+        df['EMA_20'] = df['close'].ewm(span=20, adjust=False).mean()
+        df['EMA_50'] = df['close'].ewm(span=50, adjust=False).mean()
+        
+        # MACD
+        ema12 = df['close'].ewm(span=12, adjust=False).mean()
+        ema26 = df['close'].ewm(span=26, adjust=False).mean()
+        df['MACD_12_26_9'] = ema12 - ema26
+        df['MACDs_12_26_9'] = df['MACD_12_26_9'].ewm(span=9, adjust=False).mean()
+        df['MACDh_12_26_9'] = df['MACD_12_26_9'] - df['MACDs_12_26_9']
+        
+        # RSI
+        delta = df['close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=7).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=7).mean()
+        rs = gain / loss
+        df['RSI_7'] = 100 - (100 / (1 + rs))
+        
+        gain14 = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss14 = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs14 = gain14 / loss14
+        df['RSI_14'] = 100 - (100 / (1 + rs14))
+        
+        # ATR
+        high_low = df['high'] - df['low']
+        high_close = abs(df['high'] - df['close'].shift())
+        low_close = abs(df['low'] - df['close'].shift())
+        tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+        df['ATRr_3'] = tr.rolling(window=3).mean()
+        df['ATRr_14'] = tr.rolling(window=14).mean()
         
         # 获取最新值
         latest = df.iloc[-1]
