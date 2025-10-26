@@ -287,8 +287,8 @@ Realized P&L: {realized_pnl:.2f}
                 response = type('obj', (object,), {'status_code': r.status_code})()
                 response_json = r.json() if r.status_code == 200 else {}
             else:
-                # DeepSeek使用阿里云百炼API
-                print(f"  → {self.name} 使用阿里云百炼 DeepSeek API", flush=True)
+                # DeepSeek使用阿里云百炼API（思考模式需要更长时间）
+                print(f"  → {self.name} 使用阿里云百炼 DeepSeek API（思考模式）", flush=True)
                 r = requests.post(
                     "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
                     headers={
@@ -305,7 +305,7 @@ Realized P&L: {realized_pnl:.2f}
                         "max_tokens": 2000,
                         "extra_body": {"enable_thinking": True}
                     },
-                    timeout=30
+                    timeout=90  # 增加到90秒，因为思考模式需要更长时间
                 )
                 response = type('obj', (object,), {'status_code': r.status_code})()
                 response_json = r.json() if r.status_code == 200 else {}
