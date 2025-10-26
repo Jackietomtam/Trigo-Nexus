@@ -282,7 +282,7 @@ Realized P&L: {realized_pnl:.2f}
                         "temperature": 0.6,
                         "max_tokens": 2000
                     },
-                    timeout=30
+                    timeout=90  # 增加到90秒，与DeepSeek一致
                 )
                 response = type('obj', (object,), {'status_code': r.status_code})()
                 response_json = r.json() if r.status_code == 200 else {}
