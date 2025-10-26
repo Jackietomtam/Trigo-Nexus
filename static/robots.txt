@@ -1,0 +1,26 @@
+# robots.txt for Trigo Nexus
+# https://trigonexus.us/robots.txt
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /socket.io/
+
+# Sitemap
+Sitemap: https://trigonexus.us/sitemap.xml
+
+# Crawl-delay for politeness
+Crawl-delay: 1
+
+# Allow Google bots
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Disallow: /socket.io/
+
+# Allow Bing bots
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+Disallow: /socket.io/
+
