@@ -218,6 +218,10 @@ class AlphaArena {
         const c = document.getElementById('tickerScroll');
         if (!c) return;
         changes = changes || {};
+        
+        // 保存旧价格用于比较
+        if (!this.lastPrices) this.lastPrices = {};
+        
         // 使用真实的CoinMarketCap图标
         const icons = { 
             BTC: '<img src="https://s2.coinmarketcap.com/static/img/coins/64x64/1.png" width="24" height="24" style="border-radius:50%">',
@@ -227,23 +231,46 @@ class AlphaArena {
             DOGE: '<img src="https://s2.coinmarketcap.com/static/img/coins/64x64/74.png" width="24" height="24" style="border-radius:50%">',
             XRP: '<img src="https://s2.coinmarketcap.com/static/img/coins/64x64/52.png" width="24" height="24" style="border-radius:50%">'
         };
+        
         let h = '';
         for (const [sym, price] of Object.entries(prices)) {
             const chg = changes[sym] || 0;
             const cls = chg >= 0 ? 'positive' : 'negative';
             const sign = chg >= 0 ? '+' : '';
+            
+            // 检测价格变动方向
+            const oldPrice = this.lastPrices[sym];
+            let animClass = '';
+            if (oldPrice !== undefined && oldPrice !== price) {
+                if (price > oldPrice) {
+                    animClass = 'price-flash-up flip-up';
+                } else if (price < oldPrice) {
+                    animClass = 'price-flash-down flip-down';
+                }
+            }
+            
             h += `
                 <div class="ticker-item">
                     <span class="ticker-icon">${icons[sym] || '⚪'}</span>
                     <div class="ticker-info">
                         <div class="ticker-label">${sym}</div>
-                        <div class="ticker-price">$${this.fp(price)}</div>
+                        <div class="ticker-price ${animClass}" data-symbol="${sym}">$${this.fp(price)}</div>
                     </div>
                     <div class="ticker-change ${cls}">${sign}${chg.toFixed(2)}%</div>
                 </div>
             `;
+            
+            // 保存当前价格
+            this.lastPrices[sym] = price;
         }
         c.innerHTML = h;
+        
+        // 清除动画类（动画结束后移除，以便下次可以重新触发）
+        setTimeout(() => {
+            c.querySelectorAll('.ticker-price').forEach(el => {
+                el.classList.remove('flip-up', 'flip-down', 'price-flash-up', 'price-flash-down');
+            });
+        }, 600);
         // 让整条卡片可点击以展开/收起所有详情
         document.querySelectorAll('#chatList .chat-entry').forEach(card => {
             card.addEventListener('click', (e) => {
