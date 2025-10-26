@@ -34,3 +34,9 @@ config_local.py
 # 临时文件
 *.txt~
 *.md~
+
+# 敏感信息文件（永远不要提交）
+IMPORTANT.md
+*.pem
+*.key
+*_private.md
