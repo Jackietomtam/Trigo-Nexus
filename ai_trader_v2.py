@@ -6,7 +6,7 @@ import requests
 import json
 import random
 import time
-from config import OPENROUTER_API_KEY, DASHSCOPE_API_KEY
+from config import OPENROUTER_API_KEY, DASHSCOPE_API_KEY, DASHSCOPE_DEEPSEEK_API_KEY
 
 class AITraderV2:
     """AI交易代理 - 杠杆版本"""
@@ -287,26 +287,28 @@ Realized P&L: {realized_pnl:.2f}
                 response = type('obj', (object,), {'status_code': r.status_code})()
                 response_json = r.json() if r.status_code == 200 else {}
             else:
-                # DeepSeek使用OpenRouter
-                print(f"  → {self.name} 使用OpenRouter API", flush=True)
-                response = requests.post(
-                    "https://openrouter.ai/api/v1/chat/completions",
+                # DeepSeek使用阿里云百炼API
+                print(f"  → {self.name} 使用阿里云百炼 DeepSeek API", flush=True)
+                r = requests.post(
+                    "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
                     headers={
-                        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                        "Authorization": f"Bearer {DASHSCOPE_DEEPSEEK_API_KEY}",
                         "Content-Type": "application/json"
                     },
                     json={
-                        "model": self.model,
+                        "model": "deepseek-v3.2-exp",
                         "messages": [
                             {"role": "system", "content": f"You are {self.name}, a professional crypto trader. Analyze market data and return your decisions in this exact JSON format: {{\"analysis\": \"your 200-400 word market analysis\", \"decisions\": {{\"BTC\": {{\"signal\": \"hold/long/short\", \"leverage\": 10, \"percentage\": 20, \"confidence\": 0.75, \"stop_loss\": 0, \"profit_target\": 0, \"invalidation_condition\": \"\", \"risk_usd\": 0}}, \"ETH\": {{...}}}}}}. Include ALL coins (BTC, ETH, SOL, BNB, DOGE, XRP) in your response. Use 'hold' for no action."},
                             {"role": "user", "content": prompt}
                         ],
                         "temperature": 0.7,
-                        "max_tokens": 2000
+                        "max_tokens": 2000,
+                        "extra_body": {"enable_thinking": True}
                     },
                     timeout=30
                 )
-                response_json = response.json()
+                response = type('obj', (object,), {'status_code': r.status_code})()
+                response_json = r.json() if r.status_code == 200 else {}
             
             # 统一处理返回内容
             if response.status_code == 200:

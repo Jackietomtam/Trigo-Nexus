@@ -4,6 +4,7 @@ import os
 # API 密钥（优先使用环境变量，方便部署）
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', "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")
 DASHSCOPE_API_KEY = os.getenv('DASHSCOPE_API_KEY', "sk-79529efd5f434d8aa9eea08c17441096")  # 阿里云百炼 API for Qwen3
+DASHSCOPE_DEEPSEEK_API_KEY = os.getenv('DASHSCOPE_DEEPSEEK_API_KEY', "sk-f4168a5a023345afb1ce334f25b77365")  # 阿里云百炼 API for DeepSeek
 FINNHUB_API_KEY = os.getenv('FINNHUB_API_KEY', "d1ivl31r01qhbuvsiufgd1ivl31r01qhbuvsiug0")
 
 # 交易配置
