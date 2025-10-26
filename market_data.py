@@ -14,6 +14,7 @@ from config import (
     KLINE_INTERVAL,
     KLINE_LIMIT,
     PRICE_REFRESH_SECONDS,
+    FINNHUB_API_KEY,
 )
 
 
@@ -74,6 +75,39 @@ class MarketData:
                 continue
         raise RuntimeError(f"Binance FAPI请求失败: {path} {params} -> {last_exc}")
 
+    # -------- Finnhub API (主要数据源，适合 Render 部署) --------
+    def _get_price_from_finnhub(self, symbol: str) -> tuple:
+        """从 Finnhub 获取加密货币价格（不会被 Render 封锁）"""
+        # Finnhub 加密货币交易对格式：BINANCE:BTCUSDT
+        finnhub_symbol = f"BINANCE:{CRYPTO_SYMBOLS.get(symbol)}"
+        
+        try:
+            # 获取实时报价
+            url = "https://finnhub.io/api/v1/quote"
+            response = requests.get(
+                url,
+                params={
+                    'symbol': finnhub_symbol,
+                    'token': FINNHUB_API_KEY
+                },
+                timeout=10
+            )
+            response.raise_for_status()
+            data = response.json()
+            
+            current_price = float(data.get('c', 0))  # 当前价格
+            prev_close = float(data.get('pc', current_price))  # 昨日收盘价
+            
+            if current_price == 0 or prev_close == 0:
+                raise ValueError("Finnhub 返回无效价格")
+            
+            # 计算 24小时 涨跌幅
+            change_percent = ((current_price - prev_close) / prev_close) * 100
+            
+            return current_price, change_percent
+        except Exception as e:
+            raise RuntimeError(f"Finnhub请求失败: {symbol} -> {e}")
+
     # -------- Backup: CoinGecko API --------
     def _get_price_from_coingecko(self, symbol: str) -> tuple[float, float]:
         """从 CoinGecko 获取价格（备选方案）"""
@@ -107,7 +141,7 @@ class MarketData:
 
     # -------- Realtime Prices --------
     def get_crypto_price(self, symbol: str) -> float:
-        """获取单个加密货币的实时价格（Binance + CoinGecko 备选）"""
+        """获取单个加密货币的实时价格（Finnhub 优先，Binance 备选）"""
         current_time = time.time()
         # 每个币种独立缓存判断
         if symbol in self.prices and symbol in self.last_update and (current_time - self.last_update[symbol]) < PRICE_REFRESH_SECONDS:
@@ -117,21 +151,27 @@ class MarketData:
         if not pair:
             raise ValueError(f"不支持的币种: {symbol}")
 
-        # 先尝试 Binance
+        # 第一优先：Finnhub（适合 Render 部署，不会被封锁）
         try:
-            data = self._binance_get('/api/v3/ticker/24hr', {'symbol': pair})
-            price = float(data['lastPrice'])
-            change_percent = float(data['priceChangePercent'])
-            print(f"✓ {symbol} Binance价格: ${price:,.2f} ({change_percent:+.2f}%)")
-        except Exception as e:
-            # Binance 失败，切换到 CoinGecko
-            print(f"⚠ {symbol} Binance失败，切换CoinGecko: {e}")
+            price, change_percent = self._get_price_from_finnhub(symbol)
+            print(f"✓ {symbol} Finnhub价格: ${price:,.2f} ({change_percent:+.2f}%)")
+        except Exception as e1:
+            # Finnhub 失败，尝试 Binance
+            print(f"⚠ {symbol} Finnhub失败，切换Binance: {e1}")
             try:
-                price, change_percent = self._get_price_from_coingecko(symbol)
-                print(f"✓ {symbol} CoinGecko价格: ${price:,.2f} ({change_percent:+.2f}%)")
+                data = self._binance_get('/api/v3/ticker/24hr', {'symbol': pair})
+                price = float(data['lastPrice'])
+                change_percent = float(data['priceChangePercent'])
+                print(f"✓ {symbol} Binance价格: ${price:,.2f} ({change_percent:+.2f}%)")
             except Exception as e2:
-                print(f"❌ {symbol} CoinGecko也失败: {e2}")
-                raise
+                # Binance 也失败，最后尝试 CoinGecko
+                print(f"⚠ {symbol} Binance也失败，切换CoinGecko: {e2}")
+                try:
+                    price, change_percent = self._get_price_from_coingecko(symbol)
+                    print(f"✓ {symbol} CoinGecko价格: ${price:,.2f} ({change_percent:+.2f}%)")
+                except Exception as e3:
+                    print(f"❌ {symbol} 所有数据源都失败: Finnhub/Binance/CoinGecko")
+                    raise
 
         self.prices[symbol] = price
         self.price_changes[symbol] = change_percent

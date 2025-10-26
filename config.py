@@ -37,7 +37,7 @@ BINANCE_BASE_URLS = [
 # K线与价格刷新参数
 KLINE_INTERVAL = '1m'
 KLINE_LIMIT = 500  # 初始拉取根数
-PRICE_REFRESH_SECONDS = 0.5  # 价格缓存0.5秒，接近实时
+PRICE_REFRESH_SECONDS = 10  # 价格缓存10秒（避免API限制，Finnhub免费版60次/分钟）
 
 # AI 模型配置 - 最新版本
 AI_MODELS = [
