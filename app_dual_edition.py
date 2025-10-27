@@ -121,16 +121,16 @@ def initialize_traders_edition2():
             order_manager=order_manager_e2
         )
         
-        # 包装make_decision方法
-        original_make_decision = trader.make_decision
+        # 包装make_decision方法（使用闭包正确捕获trader）
+        def create_wrapped_make_decision(trader_instance):
+            def wrapped_make_decision():
+                # 每次调用时更新账户信息
+                trader_instance.account = leverage_engine_e2.accounts.get(trader_instance.trader_id, {})
+                # AITraderV2.make_decision() 不接受参数，它会自己内部获取数据
+                return trader_instance.make_decision()
+            return wrapped_make_decision
         
-        def wrapped_make_decision(trader_obj=trader):
-            # 每次调用时更新账户信息
-            trader_obj.account = leverage_engine_e2.accounts.get(trader_obj.trader_id, {})
-            # AITraderV2.make_decision() 不接受参数，它会自己内部获取数据
-            return original_make_decision()
-        
-        trader.make_decision_wrapped = wrapped_make_decision
+        trader.make_decision_wrapped = create_wrapped_make_decision(trader)
         
         ai_traders_e2.append(trader)
         print(f"  ✓ {trader.name} ({model_config['model']})")
