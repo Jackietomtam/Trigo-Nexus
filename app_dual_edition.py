@@ -324,14 +324,6 @@ def trading_loop_edition2():
                                 # 不做任何操作；绝不因为 hold 主动平仓
                                 pass
                         
-                        # 冗余兜底：若为 Qwen 且未产生对话，补写一条聊天记录，避免前端无对话
-                        try:
-                            if 'QWEN' in (trader.name or '').upper() and decision:
-                                if not getattr(trader, 'chat_history', None):
-                                    trader._save_chat(decision, account_info, current_positions, "")
-                        except Exception as err:
-                            print(f"  ⚠️ [E2] 冗余写入聊天失败: {err}", flush=True)
-                        
                         print(f"  ✓ [E2] {trader.name} 决策完成", flush=True)
                         
                 except Exception as e:
