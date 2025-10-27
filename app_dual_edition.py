@@ -169,8 +169,10 @@ def trading_loop_edition1():
             
             last_ai_decision_time = current_time
             print(f"🤖 [E1] 开始AI决策...", flush=True)
+            print(f"  🔍 [E1] traders数量: {len(ai_traders_e1)}, 名单: {[t.name for t in ai_traders_e1]}", flush=True)
             for trader in ai_traders_e1:
                 try:
+                    print(f"  🎯 [E1] 正在处理: {trader.name} (ID: {trader.trader_id})", flush=True)
                     decision = trader.make_decision()
                     if decision and 'decisions' in decision:
                         for symbol, signal in decision['decisions'].items():
@@ -225,8 +227,10 @@ def trading_loop_edition2():
             
             last_ai_decision_time = current_time
             print(f"🤖 [E2] 开始AI决策（含新闻）...", flush=True)
+            print(f"  🔍 [E2] traders数量: {len(ai_traders_e2)}, 名单: {[t.name for t in ai_traders_e2]}", flush=True)
             for trader in ai_traders_e2:
                 try:
+                    print(f"  🎯 [E2] 正在处理: {trader.name} (ID: {trader.trader_id})", flush=True)
                     decision = trader.make_decision_wrapped()
                     if not decision:
                         continue
