@@ -60,7 +60,7 @@
     }
     </script>
     
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=20251026final">
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.js"></script>
 </head>
@@ -72,7 +72,9 @@
                 <h1 class="logo">Trigo Nexus</h1>
             </div>
             <nav class="main-nav">
-                <a href="/" class="nav-item active" id="navLive">LIVE</a>
+                <a href="/edition1" class="nav-item" id="navEdition1">EDITION1</a>
+                <span class="nav-sep">|</span>
+                <a href="/edition2" class="nav-item active" id="navEdition2">EDITION2</a>
                 <span class="nav-sep">|</span>
                 <a href="/models" class="nav-item" id="navModels">MODELS</a>
             </nav>
@@ -105,7 +107,7 @@
                         <button class="ctrl-chart" data-time="4h">4H</button>
                     </div>
                 </div>
-                <h2 class="chart-title">TOTAL ACCOUNT VALUE</h2>
+                <h2 class="chart-title">TOTAL ACCOUNT VALUE <span style="color: #00ff88; font-size: 0.6em;">[EDITION 2]</span></h2>
                 <div class="chart-wrapper">
                     <canvas id="mainChart"></canvas>
                 </div>
@@ -173,7 +175,7 @@
         </div>
     </div>
 
-    <script src="/static/js/app.js?v=20251026012"></script>
+    <script src="/static/js/app.js?v=20251027002"></script>
   <!-- Exit Plan Drawer -->
   <div id="exitOverlay" class="overlay hidden"></div>
   <div id="exitDrawer" class="drawer hidden">

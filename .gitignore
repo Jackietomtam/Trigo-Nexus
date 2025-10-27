@@ -4,12 +4,24 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
 venv/
+venv_local/
+env/
 ENV/
-build/
-dist/
 *.egg-info/
+dist/
+build/
+
+# Environment variables
+.env
+.env.local
+*.env
+
+# Logs
+*.log
+*.log.*
+app.log
+dual_edition*.log
 
 # IDE
 .vscode/
@@ -22,21 +34,9 @@ dist/
 .DS_Store
 Thumbs.db
 
-# 日志
-*.log
-nohup.out
-/tmp/
+# Settings
+settings.json
 
-# 环境变量（包含敏感信息）
-.env
-config_local.py
-
-# 临时文件
-*.txt~
-*.md~
-
-# 敏感信息文件（永远不要提交）
-IMPORTANT.md
-*.pem
-*.key
-*_private.md
+# Testing
+test_*.py
+check_*.py

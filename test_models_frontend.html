@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试 Models API</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 { color: #0ff; }
+        .model-card {
+            background: #111;
+            border: 1px solid #0f0;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+        .edition1 { border-color: #0f0; }
+        .edition2 { border-color: #0ff; }
+        .stats { color: #fff; }
+        .success { color: #0f0; font-weight: bold; }
+        .error { color: #f00; font-weight: bold; }
+        pre { background: #222; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Models API 测试页面</h1>
+    
+    <div id="status">加载中...</div>
+    
+    <h2>API 响应:</h2>
+    <pre id="apiResponse"></pre>
+    
+    <h2>模型列表:</h2>
+    <div id="modelsList"></div>
+    
+    <h2>分组统计:</h2>
+    <div id="groupStats"></div>
+
+    <script>
+        async function testModelsAPI() {
+            const statusDiv = document.getElementById('status');
+            const apiResponsePre = document.getElementById('apiResponse');
+            const modelsListDiv = document.getElementById('modelsList');
+            const groupStatsDiv = document.getElementById('groupStats');
+            
+            try {
+                statusDiv.innerHTML = '<span class="success">✓ 正在请求 /api/models...</span>';
+                
+                const response = await fetch('/api/models');
+                const models = await response.json();
+                
+                // 显示原始JSON
+                apiResponsePre.textContent = JSON.stringify(models, null, 2);
+                
+                // 统计
+                const edition1 = models.filter(m => m.edition === '1');
+                const edition2 = models.filter(m => m.edition === '2');
+                
+                statusDiv.innerHTML = `
+                    <span class="success">✓ API请求成功！</span><br>
+                    总模型数: ${models.length}<br>
+                    Edition 1: ${edition1.length} 个<br>
+                    Edition 2: ${edition2.length} 个
+                `;
+                
+                // 显示模型卡片
+                let html = '';
+                models.forEach(model => {
+                    const editionClass = model.edition === '1' ? 'edition1' : 'edition2';
+                    html += `
+                        <div class="model-card ${editionClass}">
+                            <h3>${model.name} (Edition ${model.edition})</h3>
+                            <div class="stats">
+                                <div>ID: ${model.id}</div>
+                                <div>账户价值: $${model.total_value.toLocaleString()}</div>
+                                <div>收益率: ${model.profit_loss_percent.toFixed(2)}%</div>
+                                <div>胜率: ${model.win_rate.toFixed(1)}%</div>
+                                <div>交易: ${model.trades} (${model.wins}W / ${model.losses}L)</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                modelsListDiv.innerHTML = html;
+                
+                // 分组统计
+                groupStatsDiv.innerHTML = `
+                    <div class="model-card edition1">
+                        <h3>Edition 1 (Basic)</h3>
+                        ${edition1.map(m => `<div>• ${m.name}</div>`).join('')}
+                    </div>
+                    <div class="model-card edition2">
+                        <h3>Edition 2 (With News 📰)</h3>
+                        ${edition2.map(m => `<div>• ${m.name}</div>`).join('')}
+                    </div>
+                `;
+                
+                // 检查问题
+                if (models.length !== 4) {
+                    statusDiv.innerHTML += '<br><span class="error">⚠️ 警告: 期望4个模型，但收到 ' + models.length + ' 个</span>';
+                }
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<span class="error">✗ 错误: ${error.message}</span>`;
+                console.error('Error:', error);
+            }
+        }
+        
+        // 页面加载时执行
+        testModelsAPI();
+        
+        // 每5秒刷新一次
+        setInterval(testModelsAPI, 5000);
+    </script>
+</body>
+</html>
+

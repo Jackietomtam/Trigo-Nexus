@@ -27,8 +27,9 @@
     <meta name="twitter:title" content="AI Model Performance - Trigo Nexus">
     <meta name="twitter:description" content="View detailed trading statistics and live positions of AI trading models.">
     
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=20251026011">
     <style>
+        body { padding-top: 0; }
         .stat-card { background:#0a0a0a; border:1px solid #1a1a1a; border-radius:8px; padding:16px; }
         .stat-label { color:#666; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:8px; }
         .stat-value { color:#fff; font-size:18px; font-weight:700; }
@@ -49,20 +50,35 @@
                 <h1 class="logo">Trigo Nexus</h1>
             </div>
             <nav class="main-nav">
-                <a href="/" class="nav-item">LIVE</a>
+                <a href="/edition1" class="nav-item">EDITION1</a>
+                <span class="nav-sep">|</span>
+                <a href="/edition2" class="nav-item">EDITION2</a>
                 <span class="nav-sep">|</span>
                 <a href="/models" class="nav-item active">MODELS</a>
             </nav>
         </div>
     </header>
 
-    <div style="max-width:1400px;margin:0 auto;padding:30px 40px;">
-        <a href="/" class="back-btn">← BACK TO LIVE</a>
+    <div style="max-width:1400px;margin:0 auto;padding:15px 20px;">
+        <a href="/models" class="back-btn">← BACK TO MODELS</a>
         <div id="detailRoot"></div>
     </div>
 
     <script>
-    async function api(u){ const r=await fetch(u); return r.json(); }
+    async function api(u){ 
+        const r=await fetch(u); 
+        const text = await r.text();
+        if (!r.ok) {
+            console.error('API Error:', r.status, text);
+            throw new Error(`HTTP ${r.status}: ${text.substring(0, 100)}`);
+        }
+        try {
+            return JSON.parse(text); 
+        } catch(e) {
+            console.error('JSON Parse Error:', text.substring(0, 200));
+            throw new Error(`JSON解析失败: ${e.message}. 响应内容: ${text.substring(0, 100)}`);
+        }
+    }
     function fn(n){ return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
     function fp(p){ if(p>=1000) return p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); if(p>=1) return p.toFixed(2); return p.toFixed(6); }
     function coinIcon(sym){ const m={BTC:1,ETH:1027,SOL:5426,BNB:1839,DOGE:74,XRP:52};return `<img src="https://s2.coinmarketcap.com/static/img/coins/64x64/${m[sym]||1}.png" width="24" height="24" style="border-radius:50%">`; }
@@ -90,12 +106,20 @@
                 logoHtml = '<div style="width:64px;height:64px;background:#333;border-radius:10px;"></div>';
             }
 
+            // Edition badge
+            const editionBadge = data.edition === '2' 
+                ? '<span style="display:inline-block;background:#00d4ff;color:#000;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:0.5px;margin-left:10px;vertical-align:middle;">EDITION 2 📰</span>'
+                : '<span style="display:inline-block;background:#00ff88;color:#000;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:0.5px;margin-left:10px;vertical-align:middle;">EDITION 1</span>';
+            
             let h = `
                 <div style="background:#0a0a0a;border:1px solid #1a1a1a;border-radius:12px;padding:24px;margin-bottom:24px;">
                     <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
                         ${logoHtml}
-                        <div>
-                            <h2 style="color:#fff;font-size:24px;margin:0 0 8px;">${acc.name||''}</h2>
+                        <div style="flex:1;">
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                                <h2 style="color:#fff;font-size:24px;margin:0;line-height:1;">${acc.name||''}</h2>
+                                ${editionBadge}
+                            </div>
                             <div style="font-size:13px;color:#999;">Total Account Value: <span style="color:#fff;font-weight:700;">$${fn(acc.total_value||0)}</span> · Available Cash: <span style="color:#fff;font-weight:700;">$${fn(acc.cash||0)}</span></div>
                         </div>
                     </div>
@@ -103,7 +127,6 @@
                     <div class="info-grid">
                         <div class="stat-card">
                             <div class="stat-label">TOTAL P&L</div>
-                            <!-- ✅ 强制使用后端统一数据，不做任何前端计算 -->
                             <div class="stat-value ${(acc.total_pnl_amount||0)>=0?'positive':'negative'}">${(acc.total_pnl_amount||0)>=0?'+':''}$${fn(Math.abs(acc.total_pnl_amount||0))}</div>
                         </div>
                         <div class="stat-card">
@@ -116,19 +139,35 @@
                         </div>
                     </div>
 
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                    <div class="info-grid" style="margin-top:14px;">
                         <div class="stat-card">
-                            <div class="stat-label">STATISTICS</div>
-                            <div class="field" style="margin-top:10px;">Average Leverage: <b style="color:#fff;">${(stats.avg_leverage||0).toFixed(1)}x</b></div>
-                            <div class="field">Average Confidence: <b style="color:#fff;">${((stats.avg_confidence||0)*100).toFixed(1)}%</b></div>
+                            <div class="stat-label">WIN RATE</div>
+                            <div class="stat-value">${(stats.win_rate||0).toFixed(1)}%</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">TOTAL TRADES</div>
+                            <div class="stat-value">${stats.total_trades||0} <span style="font-size:14px;color:#888;">(${stats.wins||0}W / ${stats.losses||0}L)</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">PROFIT/LOSS RATIO</div>
+                            <div class="stat-value">${(stats.profit_loss_ratio||0).toFixed(2)}</div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">
+                        <div class="stat-card">
+                            <div class="stat-label">TRADING STATS</div>
+                            <div class="field" style="margin-top:10px;">Winning Trades: <b class="positive">${stats.wins||0}</b></div>
+                            <div class="field">Losing Trades: <b class="negative">${stats.losses||0}</b></div>
                             <div class="field">Biggest Win: <b class="positive">$${fn(stats.biggest_win||0)}</b></div>
                             <div class="field">Biggest Loss: <b class="negative">$${fn(Math.abs(stats.biggest_loss||0))}</b></div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-label">HOLD TIMES</div>
-                            <div class="field" style="margin-top:10px;">Long: <b class="positive">${(stats.hold_times?.long||0)}%</b></div>
+                            <div class="stat-label">PERFORMANCE</div>
+                            <div class="field" style="margin-top:10px;">Average Leverage: <b style="color:#fff;">${(stats.avg_leverage||0).toFixed(1)}x</b></div>
+                            <div class="field">Average Confidence: <b style="color:#fff;">${((stats.avg_confidence||0)*100).toFixed(1)}%</b></div>
+                            <div class="field">Long: <b class="positive">${(stats.hold_times?.long||0)}%</b></div>
                             <div class="field">Short: <b class="negative">${(stats.hold_times?.short||0)}%</b></div>
-                            <div class="field">Flat: <b style="color:#999;">${(stats.hold_times?.flat||0)}%</b></div>
                         </div>
                     </div>
                 </div>`;

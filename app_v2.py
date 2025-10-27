@@ -451,5 +451,5 @@ if __name__ == '__main__':
     # 支持云平台部署：从环境变量读取端口，绑定到 0.0.0.0
     port = int(os.getenv('PORT', 5001))
     host = os.getenv('HOST', '0.0.0.0')
-    socketio.run(app, host=host, port=port, debug=False)
+    socketio.run(app, host=host, port=port, debug=False, allow_unsafe_werkzeug=True)
 

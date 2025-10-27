@@ -65,7 +65,14 @@ class AlphaArena {
                 scales: {
                     x: {
                         grid: { color: '#1a1a1a', drawBorder: false },
-                        ticks: { color: '#666', font: { size: 9 }, maxTicksLimit: 8 }
+                        ticks: { 
+                            color: '#666', 
+                            font: { size: 9 }, 
+                            maxTicksLimit: 12,
+                            autoSkip: true,
+                            maxRotation: 45,
+                            minRotation: 0
+                        }
                     },
                     y: {
                         grid: { color: '#1a1a1a', drawBorder: false },
@@ -95,8 +102,8 @@ class AlphaArena {
         if (navMod) {
             navMod.addEventListener('click', (e) => {
                 e.preventDefault();
-                this.showPage('models');
-                this.loadModels();
+                // 直接跳转到独立的 models 页面
+                window.location.href = '/models';
             });
         }
 
@@ -121,7 +128,17 @@ class AlphaArena {
                 if (pane) {
                     pane.classList.add('active');
                     console.log('Activated pane:', paneId);
-                    if (tab === 'positions') this.loadAllPositions();
+                    if (tab === 'positions') {
+                        // 需求：点击“持仓”直接查看“两位AI”的表现
+                        // 清除已选AI，避免单模型覆盖汇总视图
+                        this.selectedId = null;
+                        this.loadAllPositions();
+                        // 平滑滚动到持仓列表区域
+                        const list = document.getElementById('positionsList');
+                        if (list && list.scrollIntoView) {
+                            list.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }
                 } else {
                     console.log('找不到面板:', paneId);
                 }
@@ -164,6 +181,23 @@ class AlphaArena {
     }
 
     async api(url) {
+        // 自动检测当前是Edition1还是Edition2
+        const currentPath = window.location.pathname;
+        let apiPrefix = '';
+        
+        if (currentPath.includes('/edition1')) {
+            apiPrefix = '/edition1';
+        } else if (currentPath.includes('/edition2')) {
+            apiPrefix = '/edition2';
+        }
+        
+        // 如果URL以/api/开头，添加edition前缀
+        if (url.startsWith('/api/edition1/') || url.startsWith('/api/edition2/')) {
+            // 已包含完整前缀，保持不变
+        } else if (url.startsWith('/api/')) {
+            url = url.replace('/api/', `/api${apiPrefix}/`);
+        }
+        
         const res = await fetch(url);
         return res.json();
     }
@@ -378,6 +412,10 @@ class AlphaArena {
             });
         });
 
+        // 根据数据量动态调整x轴刻度
+        const ticksLimit = maxLen > 200 ? 15 : (maxLen > 100 ? 12 : 10);
+        this.chart.options.scales.x.ticks.maxTicksLimit = ticksLimit;
+        
         this.chart.data.labels = labels;
         this.chart.data.datasets = ds;
         this.chart.update('none');
@@ -631,6 +669,11 @@ class AlphaArena {
         // 重新加载历史数据
         const hist = await this.api(`/api/history?timeframe=${t}`);
         
+        // 调试：输出数据量
+        console.log(`📊 切换时间范围到 ${t}:`, Object.entries(hist).map(([name, data]) => 
+            `${name}: ${data.length}个数据点, 时间范围: ${data[0]?.timestamp ? new Date(data[0].timestamp * 1000).toLocaleString() : 'N/A'} - ${data[data.length-1]?.timestamp ? new Date(data[data.length-1].timestamp * 1000).toLocaleString() : 'N/A'}`
+        ));
+        
         // 筛选数据
         let filtered = {};
         if (t === '4h') {
@@ -639,6 +682,7 @@ class AlphaArena {
             for (const [name, data] of Object.entries(hist)) {
                 filtered[name] = data.filter(d => d.timestamp >= cutoff);
             }
+            console.log(`📊 4H筛选后:`, Object.entries(filtered).map(([name, data]) => `${name}: ${data.length}个数据点`));
         } else {
             filtered = hist;
         }
@@ -839,33 +883,69 @@ class AlphaArena {
     }
 
     async loadModels() {
-        const lb = await this.api('/api/leaderboard');
-        const grid = document.getElementById('modelsGridPage');
-        if (!grid) return;
+        try {
+            // 直接使用 fetch，不通过 this.api() 以避免添加 edition 前缀
+            const response = await fetch('/api/models');
+            const models = await response.json();
+            const grid = document.getElementById('modelsGridPage');
+            if (!grid) return;
 
-        const slugMap = {
-            'QWEN3 MAX': 'qwen3-max',
-            'DEEPSEEK V3.2': 'deepseek-v3'
-        };
-        let h = '';
-        lb.forEach(t => {
-            const slug = slugMap[t.name];
-            if (!slug) return;
-            h += `
-                <div class="model-card-full" onclick="window.location.href='/models/${slug}'" style="cursor:pointer;">
-                    <h3 style="display:flex;align-items:center;gap:10px;">${this.getAILogoSmall(t.name)} ${t.name}</h3>
-                    <p><strong>Account Value:</strong> $${this.fn(t.total_value)}</p>
-                    <p><strong>Return:</strong> ${t.profit_loss_percent>=0?'+':''}${t.profit_loss_percent.toFixed(2)}%</p>
-                </div>
-            `;
-        });
-        grid.innerHTML = h;
+            // 按 Edition 分组
+            const edition1 = models.filter(m => String(m.edition) === '1');
+            const edition2 = models.filter(m => String(m.edition) === '2');
+            
+            let h = '';
+            
+            // Edition 1 模型
+            if (edition1.length > 0) {
+                h += `<h3 style="color:#00ff88;margin-top:20px;margin-bottom:15px;">Edition 1 - Basic</h3>`;
+                edition1.forEach(m => {
+                    const profitSign = m.profit_loss_percent >= 0 ? '+' : '';
+                    const profitClass = m.profit_loss_percent >= 0 ? 'positive' : 'negative';
+                    h += `
+                        <div class="model-card-full" onclick="window.location.href='/models/${m.id}'" style="cursor:pointer;margin-bottom:15px;">
+                            <h3 style="display:flex;align-items:center;gap:10px;">${this.getAILogoSmall(m.name)} ${m.name}</h3>
+                            <p><strong>Account Value:</strong> $${this.fn(m.total_value)}</p>
+                            <p><strong>Return:</strong> <span class="${profitClass}">${profitSign}${m.profit_loss_percent.toFixed(2)}%</span></p>
+                            <p><strong>Win Rate:</strong> ${m.win_rate.toFixed(1)}%</p>
+                            <p><strong>Trades:</strong> ${m.trades} (${m.wins}W/${m.losses}L)</p>
+                        </div>
+                    `;
+                });
+            }
+            
+            // Edition 2 模型
+            if (edition2.length > 0) {
+                h += `<h3 style="color:#00ccff;margin-top:30px;margin-bottom:15px;">Edition 2 - With News 📰</h3>`;
+                edition2.forEach(m => {
+                    const profitSign = m.profit_loss_percent >= 0 ? '+' : '';
+                    const profitClass = m.profit_loss_percent >= 0 ? 'positive' : 'negative';
+                    h += `
+                        <div class="model-card-full" onclick="window.location.href='/models/${m.id}'" style="cursor:pointer;margin-bottom:15px;">
+                            <h3 style="display:flex;align-items:center;gap:10px;">${this.getAILogoSmall(m.name)} ${m.name}</h3>
+                            <p><strong>Account Value:</strong> $${this.fn(m.total_value)}</p>
+                            <p><strong>Return:</strong> <span class="${profitClass}">${profitSign}${m.profit_loss_percent.toFixed(2)}%</span></p>
+                            <p><strong>Win Rate:</strong> ${m.win_rate.toFixed(1)}%</p>
+                            <p><strong>Trades:</strong> ${m.trades} (${m.wins}W/${m.losses}L)</p>
+                        </div>
+                    `;
+                });
+            }
+            
+            grid.innerHTML = h;
+            console.log(`✓ Loaded ${models.length} models (E1: ${edition1.length}, E2: ${edition2.length})`);
+        } catch (error) {
+            console.error('Failed to load models:', error);
+            const grid = document.getElementById('modelsGridPage');
+            if (grid) grid.innerHTML = '<p style="color:red;">Failed to load models</p>';
+        }
     }
 
     getStrategy(name) {
         const m = {
             'QWEN3 MAX': '激进型',
-            'DEEPSEEK CHAT V3.1': '平衡型',
+            'DEEPSEEK V3.2': '平衡型',
+            'DEEPSEEK CHAT V3.1': '平衡型',  // 兼容旧名称
             'CLAUDE SONNET 4.5': '保守型',
             'GROK 4': '动量型',
             'GEMINI 2.5 PRO': '剥头皮型',
@@ -877,7 +957,8 @@ class AlphaArena {
     getDesc(name) {
         const m = {
             'QWEN3 MAX': '阿里巴巴通义千问，追求高收益',
-            'DEEPSEEK CHAT V3.1': '中国DeepSeek，平衡风险与收益',
+            'DEEPSEEK V3.2': '中国DeepSeek，平衡风险与收益',
+            'DEEPSEEK CHAT V3.1': '中国DeepSeek，平衡风险与收益',  // 兼容旧名称
             'CLAUDE SONNET 4.5': 'Anthropic Claude，注重风险控制',
             'GROK 4': 'xAI Grok，追踪市场趋势',
             'GEMINI 2.5 PRO': 'Google Gemini，从小幅波动获利',

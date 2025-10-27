@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Models - Trigo Nexus</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="apple-touch-icon" href="/static/favicon-180.png">
+    <link rel="manifest" href="/static/site.webmanifest">
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Trigo Nexus AI Trading Models - Compare Edition 1 and Edition 2 performance">
+    <meta name="keywords" content="AI trading, crypto trading, QWEN3, DeepSeek, trading models">
+    
+    <link rel="stylesheet" href="/static/css/style.css?v=20251026040">
+    
+    <style>
+        body { padding-top: 0; }
+        .models-page .header { 
+            padding: 20px 0 !important;
+            height: 69px !important;
+            box-sizing: border-box !important;
+        }
+        .models-page .header-container { 
+            padding: 0 40px !important;
+            height: 100% !important;
+        }
+        .models-page .logo-area {
+            display: flex !important;
+            align-items: flex-end !important;
+            gap: 12px !important;
+        }
+        .models-page .logo {
+            font-size: 24px !important;
+            font-weight: 700 !important;
+            line-height: 1.2 !important;
+        }
+        .models-page .models-container { padding-top: 35px !important; }
+        .models-page .models-header { margin-bottom: 14px !important; }
+        .models-page .models-header h1 { font-size: 30px; margin-top: 2px; }
+        
+        .models-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 15px 20px;
+        }
+        
+        .models-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .models-header h1 {
+            font-size: 32px;
+            margin-bottom: 6px;
+            background: linear-gradient(90deg, #00ff88, #00ccff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .models-header p {
+            color: #888;
+            font-size: 13px;
+        }
+        
+        .edition-section {
+            margin-bottom: 30px;
+        }
+        
+        .edition-section:first-of-type {
+            margin-top: 30px;
+        }
+        
+        .edition-title {
+            font-size: 22px;
+            margin-bottom: 15px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .edition-badge {
+            font-size: 14px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        
+        .edition-badge.e1 {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+        }
+        
+        .edition-badge.e2 {
+            background: rgba(0, 204, 255, 0.2);
+            color: #00ccff;
+        }
+        
+        .models-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 25px;
+        }
+        
+        .model-card {
+            background: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(20, 20, 20, 0.95) 100%);
+            border: 2px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .model-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.05), rgba(0, 204, 255, 0.05));
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+        
+        .model-card:hover::before {
+            opacity: 1;
+        }
+        
+        .model-card:hover {
+            transform: translateY(-5px);
+            border-color: #00ff88;
+            box-shadow: 0 15px 30px rgba(0, 255, 136, 0.12), 0 0 0 1px rgba(0, 255, 136, 0.08);
+        }
+        
+        .model-card.edition2:hover {
+            border-color: #00ccff;
+            box-shadow: 0 15px 30px rgba(0, 204, 255, 0.12), 0 0 0 1px rgba(0, 204, 255, 0.08);
+        }
+        
+        .model-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .model-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+            border: 2px solid #333;
+            position: relative;
+        }
+        
+        .model-icon::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 10px;
+            padding: 2px;
+            background: linear-gradient(135deg, #00ff88, #00ccff);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .model-card:hover .model-icon::before {
+            opacity: 1;
+        }
+        
+        .model-icon img {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+            border-radius: 6px;
+            background: #fff;
+            padding: 3px;
+        }
+        
+        .model-icon.qwen img {
+            background: #fff;
+        }
+        
+        .model-icon.deepseek img {
+            background: #fff;
+        }
+        
+        .model-info h3 {
+            font-size: 18px;
+            margin-bottom: 3px;
+            text-align: left;
+        }
+        
+        .model-info p {
+            color: #888;
+            font-size: 12px;
+            text-align: left;
+        }
+        
+        .model-stats {
+            margin-top: 16px;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s;
+        }
+        
+        .stat-row:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(0, 255, 136, 0.2);
+            transform: translateX(4px);
+        }
+        
+        .stat-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .stat-label {
+            color: #999;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+        
+        .stat-value {
+            font-size: 14px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .stat-value.positive {
+            color: #00ff88;
+        }
+        
+        .stat-value.negative {
+            color: #ff4444;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 100px 20px;
+            color: #888;
+            font-size: 18px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #888;
+        }
+        
+        .news-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: linear-gradient(135deg, rgba(0, 204, 255, 0.2), rgba(0, 255, 136, 0.15));
+            color: #00ccff;
+            padding: 5px 10px;
+            border-radius: 16px;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            border: 1px solid rgba(0, 204, 255, 0.4);
+            backdrop-filter: blur(10px);
+            letter-spacing: 0.3px;
+            box-shadow: 0 2px 8px rgba(0, 204, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="models-page">
+    <!-- 顶部导航 -->
+    <header class="header">
+        <div class="header-container">
+            <div class="logo-area">
+                <h1 class="logo">Trigo Nexus</h1>
+            </div>
+            <nav class="main-nav">
+                <a href="/edition1" class="nav-item">EDITION1</a>
+                <span class="nav-sep">|</span>
+                <a href="/edition2" class="nav-item">EDITION2</a>
+                <span class="nav-sep">|</span>
+                <a href="/models" class="nav-item active">MODELS</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="models-container">
+        <!-- Header -->
+        <!-- Loading State -->
+        <div id="loadingState" class="loading">
+            <div>Loading AI models...</div>
+        </div>
+        
+        <!-- Debug Info -->
+        <div id="debugInfo"></div>
+
+        <!-- Edition 1 Section -->
+        <div id="edition1Section" class="edition-section" style="display:none;">
+            <div class="edition-title">
+                <span>Edition 1</span>
+                <span class="edition-badge e1">Basic</span>
+            </div>
+            <div id="edition1Grid" class="models-grid"></div>
+        </div>
+
+        <!-- Edition 2 Section -->
+        <div id="edition2Section" class="edition-section" style="display:none;">
+            <div class="edition-title">
+                <span>Edition 2</span>
+                <span class="edition-badge e2">With News 📰</span>
+            </div>
+            <div id="edition2Grid" class="models-grid"></div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display:none;">
+            <div>No models found</div>
+        </div>
+    </div>
+
+    <script>
+        // 格式化数字
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return '$' + (num / 1000000).toFixed(2) + 'M';
+            } else if (num >= 1000) {
+                return '$' + (num / 1000).toFixed(2) + 'K';
+            }
+            return '$' + num.toFixed(2);
+        }
+
+        // 加载模型数据
+        async function loadModels() {
+            try {
+                // 添加时间戳防止缓存
+                const timestamp = new Date().getTime();
+                const response = await fetch('/api/models?t=' + timestamp);
+                
+                // 检查HTTP状态
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                console.log('=== MODELS API RESPONSE ===');
+                console.log('Raw response:', data);
+                console.log('Response type:', typeof data);
+                
+                // 处理可能的错误响应
+                let models = data;
+                
+                // 如果返回的是对象且包含models字段
+                if (data && typeof data === 'object' && !Array.isArray(data)) {
+                    if (data.models && Array.isArray(data.models)) {
+                        models = data.models;
+                    } else if (data.error) {
+                        throw new Error(data.error);
+                    } else {
+                        throw new Error('Invalid response format: ' + JSON.stringify(data));
+                    }
+                }
+                
+                // 确保models是数组
+                if (!Array.isArray(models)) {
+                    throw new Error('Models is not an array: ' + typeof models);
+                }
+                
+                console.log('Total models:', models.length);
+                console.log('Models data:', models);
+                
+                if (!models || models.length === 0) {
+                    document.getElementById('loadingState').style.display = 'none';
+                    document.getElementById('emptyState').style.display = 'block';
+                    return;
+                }
+                
+                // 分组：Edition 1 和 Edition 2
+                const edition1Models = [];
+                const edition2Models = [];
+                
+                // 手动分组，确保类型匹配
+                models.forEach(model => {
+                    const edition = String(model.edition).trim();
+                    if (edition === '1') {
+                        edition1Models.push(model);
+                    } else if (edition === '2') {
+                        edition2Models.push(model);
+                    }
+                });
+                
+                console.log('Edition 1 models:', edition1Models.length, edition1Models);
+                console.log('Edition 2 models:', edition2Models.length, edition2Models);
+                
+                // 显示调试信息在页面上
+                const debugInfo = document.getElementById('debugInfo');
+                if (debugInfo) {
+                    debugInfo.innerHTML = `
+                        <div style="background:#1a3a1a;color:#0f0;padding:10px;border-radius:8px;margin-bottom:20px;font-family:monospace;font-size:12px;">
+                            <strong>🔍 调试信息:</strong><br>
+                            总模型数: ${models.length}<br>
+                            Edition 1: ${edition1Models.length} 个 - ${edition1Models.map(m => m.name).join(', ')}<br>
+                            Edition 2: ${edition2Models.length} 个 - ${edition2Models.map(m => m.name).join(', ')}
+                        </div>
+                    `;
+                }
+                
+                // 清空容器
+                document.getElementById('edition1Grid').innerHTML = '';
+                document.getElementById('edition2Grid').innerHTML = '';
+                
+                // 渲染并显示
+                if (edition1Models.length > 0) {
+                    renderModels(edition1Models, 'edition1Grid', false);
+                    document.getElementById('edition1Section').style.display = 'block';
+                }
+                
+                if (edition2Models.length > 0) {
+                    renderModels(edition2Models, 'edition2Grid', true);
+                    document.getElementById('edition2Section').style.display = 'block';
+                }
+                
+                document.getElementById('loadingState').style.display = 'none';
+                
+                // 显示调试信息
+                if (models.length !== 4) {
+                    alert('警告：期望4个模型，但收到 ' + models.length + ' 个模型。请查看控制台日志。');
+                }
+                
+            } catch (error) {
+                console.error('Failed to load models:', error);
+                console.error('Error stack:', error.stack);
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('emptyState').innerHTML = '<div style="color:#ff4444;padding:40px;text-align:center;"><div style="font-size:48px;margin-bottom:20px;">⚠️</div><div style="font-size:18px;margin-bottom:10px;">Failed to load models</div><div style="font-size:14px;color:#999;">' + error.message + '</div><div style="margin-top:20px;"><button onclick="location.reload()" style="background:#00ff88;color:#000;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-weight:700;">RELOAD PAGE</button></div></div>';
+                document.getElementById('emptyState').style.display = 'block';
+            }
+        }
+
+        // 渲染模型卡片
+        function renderModels(models, containerId, isEdition2) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            models.forEach(model => {
+                const card = document.createElement('div');
+                card.className = `model-card ${isEdition2 ? 'edition2' : ''}`;
+                card.onclick = () => {
+                    window.location.href = `/models/${model.id}`;
+                };
+                
+                const profitClass = model.profit_loss_percent >= 0 ? 'positive' : 'negative';
+                const profitSign = model.profit_loss_percent >= 0 ? '+' : '';
+                
+                const iconClass = model.name.toLowerCase().includes('qwen') ? 'qwen' : 'deepseek';
+                const iconSrc = model.name.toLowerCase().includes('qwen') ? 
+                    '/static/img/ai/qwen.png?nocache=' + Math.random() + '&t=' + Date.now() : 
+                    '/static/img/ai/deepseek.jpg?nocache=' + Math.random() + '&t=' + Date.now();
+                
+                console.log('Loading icon:', model.name, 'from:', iconSrc);
+                
+                card.innerHTML = `
+                    ${isEdition2 ? '<div class="news-badge">📰 With News</div>' : ''}
+                    
+                    <div class="model-header">
+                        <div class="model-icon ${iconClass}">
+                            <img src="${iconSrc}" alt="${model.name}" onerror="console.error('Failed to load icon:', this.src); this.style.border='2px solid red';" onload="console.log('Icon loaded successfully:', this.src);" />
+                        </div>
+                        <div class="model-info">
+                            <h3>${model.name}</h3>
+                            <p>Edition ${model.edition}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="model-stats">
+                        <div class="stat-row">
+                            <span class="stat-label">Account Value</span>
+                            <span class="stat-value">${formatNumber(model.total_value)}</span>
+                        </div>
+                        
+                        <div class="stat-row">
+                            <span class="stat-label">Return</span>
+                            <span class="stat-value ${profitClass}">${profitSign}${model.profit_loss_percent.toFixed(2)}%</span>
+                        </div>
+                        
+                        <div class="stat-row">
+                            <span class="stat-label">Win Rate</span>
+                            <span class="stat-value">${model.win_rate.toFixed(1)}%</span>
+                        </div>
+                        
+                        <div class="stat-row">
+                            <span class="stat-label">Total Trades</span>
+                            <span class="stat-value">${model.trades} (${model.wins}W / ${model.losses}L)</span>
+                        </div>
+                        
+                        <div class="stat-row">
+                            <span class="stat-label">Biggest Win</span>
+                            <span class="stat-value positive">$${model.biggest_win.toFixed(2)}</span>
+                        </div>
+                        
+                        <div class="stat-row">
+                            <span class="stat-label">Biggest Loss</span>
+                            <span class="stat-value negative">$${model.biggest_loss.toFixed(2)}</span>
+                        </div>
+                        
+                        <div class="stat-row">
+                            <span class="stat-label">Profit/Loss Ratio</span>
+                            <span class="stat-value">${model.profit_loss_ratio.toFixed(2)}</span>
+                        </div>
+                        
+                        <div class="stat-row">
+                            <span class="stat-label">Open Positions</span>
+                            <span class="stat-value">${model.positions}</span>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        // 页面加载时获取数据
+        console.log('=== Models Page Loaded ===');
+        console.log('Version: 20251026011 - COMPACT DESIGN');
+        console.log('Timestamp:', new Date().toISOString());
+        
+        loadModels();
+        
+        // 每10秒刷新一次（用于测试）
+        setInterval(loadModels, 10000);
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+

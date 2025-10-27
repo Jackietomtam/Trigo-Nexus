@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Models - Trigo Nexus [NEW]</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=NEW">
+    
+    <style>
+        body { padding-top: 70px; }
+        .models-container { max-width: 1400px; margin: 0 auto; padding: 15px 20px; }
+        .edition-section { margin-bottom: 30px; }
+        .edition-title { font-size: 22px; margin-bottom: 15px; padding-bottom: 6px; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 8px; }
+        .edition-badge { font-size: 14px; padding: 4px 12px; border-radius: 12px; }
+        .edition-badge.e1 { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+        .edition-badge.e2 { background: rgba(0, 204, 255, 0.2); color: #00ccff; }
+        .models-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 30px; margin-top: 30px; }
+        .model-card { background: rgba(20, 20, 20, 0.8); border: 1px solid #333; border-radius: 12px; padding: 30px; cursor: pointer; transition: all 0.3s; }
+        .model-card:hover { transform: translateY(-5px); border-color: #00ff88; box-shadow: 0 10px 30px rgba(0, 255, 136, 0.2); }
+        .model-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .model-icon { width: 60px; height: 60px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+        .model-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .model-info h3 { font-size: 24px; margin-bottom: 5px; }
+        .model-info p { color: #888; font-size: 14px; }
+        .model-stats { margin-top: 20px; }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #333; }
+        .stat-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .stat-label { color: #888; font-size: 14px; }
+        .stat-value { font-size: 16px; font-weight: 600; }
+        .stat-value.positive { color: #00ff88; }
+        .stat-value.negative { color: #ff4444; }
+        .debug-info { background: #1a1a1a; padding: 20px; margin: 20px 0; border: 2px solid #0ff; border-radius: 8px; color: #0f0; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <header class="header">
+        <div class="header-container">
+            <div class="logo-area">
+                <h1 class="logo">Trigo Nexus</h1>
+            </div>
+            <nav class="main-nav">
+                <a href="/edition1" class="nav-item">EDITION1</a>
+                <span class="nav-sep">|</span>
+                <a href="/edition2" class="nav-item">EDITION2</a>
+                <span class="nav-sep">|</span>
+                <a href="/models" class="nav-item active">MODELS</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="models-container">
+        <h1 style="text-align:center;margin-bottom:40px;color:#0ff;">AI MODELS [NEW - NO CACHE]</h1>
+        
+        <!-- 调试信息（可折叠） -->
+        <details>
+            <summary style="cursor:pointer;color:#0ff;margin:20px 0;">🔍 调试信息（点击展开）</summary>
+            <div class="debug-info" id="debugInfo">Loading...</div>
+        </details>
+        
+        <!-- Edition 1 Section -->
+        <div id="edition1Section" class="edition-section">
+            <div class="edition-title">
+                <span>Edition 1</span>
+                <span class="edition-badge e1">Basic</span>
+            </div>
+            <div id="edition1Grid" class="models-grid"></div>
+        </div>
+
+        <!-- Edition 2 Section -->
+        <div id="edition2Section" class="edition-section">
+            <div class="edition-title">
+                <span>Edition 2</span>
+                <span class="edition-badge e2">With News 📰</span>
+            </div>
+            <div id="edition2Grid" class="models-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        console.log('=== NEW MODELS PAGE - NO CACHE ===');
+        console.log('Timestamp:', new Date().toISOString());
+        
+        async function loadModels() {
+            const debugDiv = document.getElementById('debugInfo');
+            
+            try {
+                const timestamp = Date.now();
+                const url = `/api/models?nocache=${timestamp}`;
+                console.log('Fetching:', url);
+                
+                const response = await fetch(url);
+                const models = await response.json();
+                
+                debugDiv.innerHTML = `
+                    ✓ API Response OK<br>
+                    Total models: ${models.length}<br>
+                    Raw data: ${JSON.stringify(models, null, 2)}
+                `;
+                
+                console.log('Total models:', models.length);
+                console.log('Models:', models);
+                
+                // Edition 1
+                const e1 = models.filter(m => String(m.edition) === '1');
+                console.log('Edition 1:', e1);
+                
+                // Edition 2
+                const e2 = models.filter(m => String(m.edition) === '2');
+                console.log('Edition 2:', e2);
+                
+                // Render
+                renderModels(e1, 'edition1Grid');
+                renderModels(e2, 'edition2Grid');
+                
+            } catch (error) {
+                debugDiv.innerHTML = `✗ ERROR: ${error.message}`;
+                console.error('Error:', error);
+            }
+        }
+        
+        function renderModels(models, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            models.forEach(model => {
+                const card = document.createElement('div');
+                card.className = 'model-card';
+                
+                const profitClass = model.profit_loss_percent >= 0 ? 'positive' : 'negative';
+                const profitSign = model.profit_loss_percent >= 0 ? '+' : '';
+                
+                // 使用真实的logo图片
+                const logoSrc = model.name.includes('QWEN') ? 
+                    '/static/img/ai/qwen.png' : 
+                    '/static/img/ai/deepseek.jpg';
+                
+                card.innerHTML = `
+                    <div class="model-header">
+                        <div class="model-icon">
+                            <img src="${logoSrc}" alt="${model.name}" />
+                        </div>
+                        <div class="model-info">
+                            <h3>${model.name}</h3>
+                            <p>Edition ${model.edition}</p>
+                        </div>
+                    </div>
+                    <div class="model-stats">
+                        <div class="stat-row">
+                            <span class="stat-label">Account Value</span>
+                            <span class="stat-value">$${model.total_value.toLocaleString()}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Return</span>
+                            <span class="stat-value ${profitClass}">${profitSign}${model.profit_loss_percent.toFixed(2)}%</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Win Rate</span>
+                            <span class="stat-value">${model.win_rate.toFixed(1)}%</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Trades</span>
+                            <span class="stat-value">${model.trades} (${model.wins}W / ${model.losses}L)</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Biggest Win</span>
+                            <span class="stat-value positive">$${model.biggest_win.toFixed(2)}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Biggest Loss</span>
+                            <span class="stat-value negative">$${model.biggest_loss.toFixed(2)}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">P/L Ratio</span>
+                            <span class="stat-value">${model.profit_loss_ratio.toFixed(2)}</span>
+                        </div>
+                    </div>
+                `;
+                
+                // 添加点击事件
+                card.onclick = () => {
+                    window.location.href = `/models/${model.id}`;
+                };
+                
+                container.appendChild(card);
+            });
+        }
+        
+        loadModels();
+        setInterval(loadModels, 15000);
+    </script>
+</body>
+</html>
+

@@ -26,24 +26,33 @@ class MarketData:
 
     # -------- Binance HTTP Helper --------
     def _binance_get(self, path: str, params: Dict[str, Any]) -> Any:
+        import time
         last_exc: Optional[Exception] = None
-        for base in BINANCE_BASE_URLS:
-            url = f"{base}{path}"
-            try:
-                response = requests.get(
-                    url,
-                    params=params,
-                    headers={
-                        'User-Agent': 'TrigoNexus/1.0',
-                        'Accept': 'application/json'
-                    },
-                    timeout=15  # 增加超时时间
-                )
-                response.raise_for_status()
-                return response.json()
-            except Exception as e:
-                last_exc = e
-                continue
+        
+        # 添加重试机制：每个base URL尝试2次，失败后等待
+        for attempt in range(2):
+            for base in BINANCE_BASE_URLS:
+                url = f"{base}{path}"
+                try:
+                    response = requests.get(
+                        url,
+                        params=params,
+                        headers={
+                            'User-Agent': 'TrigoNexus/1.0',
+                            'Accept': 'application/json'
+                        },
+                        timeout=20  # 增加超时时间到20秒
+                    )
+                    response.raise_for_status()
+                    return response.json()
+                except Exception as e:
+                    last_exc = e
+                    continue
+            
+            # 第一次尝试所有base都失败，等待2秒后重试
+            if attempt == 0:
+                time.sleep(2)
+        
         raise RuntimeError(f"Binance请求失败: {path} {params} -> {last_exc}")
 
     # -------- Futures (Perps) Helpers --------

@@ -18,6 +18,8 @@ body {
     background: #000000;
     border-bottom: 1px solid #1a1a1a;
     padding: 20px 0;
+    height: 69px; /* 固定高度 */
+    box-sizing: border-box;
 }
 
 .header-container {
@@ -27,6 +29,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    height: 100%;
 }
 
 .logo-area {
@@ -88,6 +91,8 @@ body {
     border-bottom: 1px solid #1a1a1a;
     padding: 18px 0;
     overflow: hidden;
+    height: 67px; /* 固定高度 */
+    box-sizing: border-box;
 }
 
 .ticker-scroll {
@@ -96,6 +101,8 @@ body {
     padding: 0 40px;
     display: flex;
     gap: 50px;
+    height: 100%;
+    align-items: center;
 }
 
 .ticker-item {

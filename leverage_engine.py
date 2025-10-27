@@ -247,9 +247,9 @@ class LeverageEngine:
                 'profit_loss_percent': account['profit_loss_percent']
             })
             
-            # 只保留最近1000个数据点
-            if len(self.account_history[trader_id]) > 1000:
-                self.account_history[trader_id] = self.account_history[trader_id][-1000:]
+            # 数据压缩策略：保留更长时间的历史，但对旧数据降采样
+            if len(self.account_history[trader_id]) > 5000:
+                self.account_history[trader_id] = self._compress_history(self.account_history[trader_id])
         
         # 更新BTC Buy & Hold基准
         if 'BTC' in current_prices:
@@ -271,9 +271,9 @@ class LeverageEngine:
                 'price': btc_price
             })
             
-            # 只保留最近1000个数据点
-            if len(self.btc_benchmark['history']) > 1000:
-                self.btc_benchmark['history'] = self.btc_benchmark['history'][-1000:]
+            # 数据压缩策略：保留更长时间的历史，但对旧数据降采样
+            if len(self.btc_benchmark['history']) > 5000:
+                self.btc_benchmark['history'] = self._compress_history(self.btc_benchmark['history'])
     
     def liquidate_position(self, trader_id, symbol, current_price):
         """清算持仓"""
@@ -444,6 +444,56 @@ class LeverageEngine:
     def get_trades(self, limit=100):
         """获取交易记录"""
         return sorted(self.trades, key=lambda x: x['timestamp'], reverse=True)[:limit]
+    
+    def _compress_history(self, history):
+        """
+        压缩历史数据，保留长期数据但降低采样率
+        策略：
+        - 最近24小时：保留所有点（每30秒）
+        - 1-7天前：每5分钟保留1个点
+        - 7-30天前：每30分钟保留1个点
+        - 30天以上：每2小时保留1个点
+        """
+        import time
+        if len(history) <= 1000:
+            return history
+        
+        now = time.time()
+        compressed = []
+        
+        # 分组处理
+        hour_24 = now - 24 * 3600
+        day_7 = now - 7 * 24 * 3600
+        day_30 = now - 30 * 24 * 3600
+        
+        last_kept_5m = 0
+        last_kept_30m = 0
+        last_kept_2h = 0
+        
+        for point in history:
+            ts = point['timestamp']
+            
+            if ts >= hour_24:
+                # 最近24小时：全部保留
+                compressed.append(point)
+            elif ts >= day_7:
+                # 1-7天：每5分钟保留1个
+                if ts - last_kept_5m >= 300:
+                    compressed.append(point)
+                    last_kept_5m = ts
+            elif ts >= day_30:
+                # 7-30天：每30分钟保留1个
+                if ts - last_kept_30m >= 1800:
+                    compressed.append(point)
+                    last_kept_30m = ts
+            else:
+                # 30天以上：每2小时保留1个
+                if ts - last_kept_2h >= 7200:
+                    compressed.append(point)
+                    last_kept_2h = ts
+        
+        print(f"📊 数据压缩: {len(history)} -> {len(compressed)} 个点", flush=True)
+        return compressed
     
     def get_account_history(self, timeframe='all'):
         """获取账户价值历史（包含BTC基准）"""
