@@ -52,11 +52,7 @@ class AITraderV2:
             prompt = self._build_detailed_prompt(account, positions, all_indicators)
             print(f"  → {self.name} prompt长度: {len(prompt)}", flush=True)
             
-            # 节流：每3分钟最多一次决策/对话（不写入占位对话，避免"假对话"观感）
-            now = time.time()
-            if self.chat_history and (now - self.chat_history[-1]['timestamp'] < 180):
-                return None
-
+            # Edition 1/2的交易循环已经控制了3分钟决策间隔，此处不需要再检查
             # 调用AI
             print(f"  → {self.name} 调用AI模型: {self.model}...", flush=True)
             decision = self._call_ai(prompt)
