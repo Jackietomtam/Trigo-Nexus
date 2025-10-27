@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Edition 2 诊断工具</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #111;
+            border: 1px solid #0f0;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .success { color: #0f0; }
+        .error { color: #f00; }
+        .warning { color: #ff0; }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #0ff; }
+        pre {
+            background: #222;
+            padding: 10px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Edition 2 诊断工具</h1>
+    
+    <div class="test-section">
+        <h2>步骤1: 测试API连接</h2>
+        <button onclick="testAPI()">测试 Leaderboard API</button>
+        <div id="apiResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>步骤2: 检查JavaScript加载</h2>
+        <button onclick="testJS()">检查 app.js 版本</button>
+        <div id="jsResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>步骤3: 清除缓存并重新加载</h2>
+        <button onclick="clearAndReload()">🔄 强制刷新页面</button>
+        <p class="warning">⚠️ 这将清除当前页面缓存并重新加载</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>步骤4: 跳转到 Edition 2</h2>
+        <button onclick="goToEdition2()">🚀 打开 Edition 2 (带时间戳)</button>
+        <p class="success">这将以绕过缓存的方式打开Edition 2</p>
+    </div>
+
+    <script>
+        async function testAPI() {
+            const result = document.getElementById('apiResult');
+            result.innerHTML = '<p class="warning">⏳ 正在测试...</p>';
+            
+            try {
+                const response = await fetch('/api/edition2/leaderboard');
+                const data = await response.json();
+                
+                const aiList = data.filter(x => x.name !== 'BTC BUY&HOLD');
+                
+                let html = '<p class="success">✅ API连接成功！</p>';
+                html += '<pre>返回数据:\n';
+                aiList.forEach(ai => {
+                    html += `ID: ${ai.id}, Name: ${ai.name}\n`;
+                });
+                html += '</pre>';
+                
+                result.innerHTML = html;
+            } catch (error) {
+                result.innerHTML = `<p class="error">❌ API错误: ${error.message}</p>`;
+            }
+        }
+        
+        function testJS() {
+            const result = document.getElementById('jsResult');
+            const scripts = document.querySelectorAll('script[src*="app.js"]');
+            
+            if (scripts.length > 0) {
+                const src = scripts[0].src;
+                const version = src.match(/v=([^&]*)/);
+                
+                let html = '<p class="success">✅ 找到 app.js</p>';
+                html += `<pre>URL: ${src}\n`;
+                if (version) {
+                    html += `版本号: ${version[1]}\n`;
+                    if (version[1] === '1761533431') {
+                        html += '<span class="success">✅ 版本号正确（最新）</span>';
+                    } else {
+                        html += '<span class="error">❌ 版本号过期，需要清除缓存</span>';
+                    }
+                }
+                html += '</pre>';
+                
+                result.innerHTML = html;
+            } else {
+                result.innerHTML = '<p class="error">❌ 未找到 app.js</p>';
+            }
+        }
+        
+        function clearAndReload() {
+            // 清除缓存并重新加载
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    names.forEach(name => caches.delete(name));
+                });
+            }
+            
+            // 使用时间戳强制重新加载
+            window.location.href = window.location.pathname + '?t=' + Date.now();
+        }
+        
+        function goToEdition2() {
+            // 使用时间戳打开Edition 2
+            window.location.href = '/edition2?t=' + Date.now();
+        }
+        
+        // 页面加载时自动运行测试
+        window.addEventListener('load', () => {
+            testAPI();
+            testJS();
+        });
+    </script>
+</body>
+</html>
+

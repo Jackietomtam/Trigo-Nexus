@@ -421,6 +421,10 @@ def edition1_history():
 def edition2_page():
     return render_template('edition2.html')
 
+@app.route('/edition2/test')
+def edition2_test():
+    return render_template('edition2_test.html')
+
 @app.route('/api/edition2/prices')
 def edition2_prices():
     prices = market_data_e2.get_all_prices()
