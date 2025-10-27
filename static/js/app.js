@@ -786,13 +786,13 @@ class AlphaArena {
 
     renderPositionsBlock(data) {
         if (!data) return '';
-        // 统一数据源：优先使用后端 metrics（与排行榜一致的单一口径）
-        const metrics = data.metrics || {};
+        // 统一数据源：优先使用 account，如果没有则使用 metrics
         const account = data.account || {};
+        const metrics = data.metrics || {};
         const displayName = account.name || metrics.trader_name || '';
-        // ✅ 强制使用后端统一数据，不做任何前端计算
-        const unrealizedPnl = metrics.unrealized_pnl || 0;
-        const totalPnlAmount = metrics.total_pnl_amount || 0;
+        // ✅ 强制使用后端统一数据，不做任何前端计算（优先account，其次metrics）
+        const unrealizedPnl = account.unrealized_pnl ?? metrics.unrealized_pnl ?? 0;
+        const totalPnlAmount = account.total_pnl_amount ?? metrics.total_pnl_amount ?? 0;
         const positions = data.positions || [];
         let h = `
             <div class="pos-card" style="width:100%;box-sizing:border-box;">
@@ -1017,12 +1017,12 @@ class AlphaArena {
             this.positionsScrollLeft = tableWrapper.scrollLeft;
         }
         
-        const account = data.account;
+        const account = data.account || {};
         const metrics = data.metrics || {};
-        // ✅ 强制使用后端统一数据，不做任何前端计算
-        const totalPnlAmount = metrics.total_pnl_amount || 0;
-        const totalFees = metrics.total_fees || 0;
-        const realizedPnl = metrics.realized_pnl || 0;
+        // ✅ 强制使用后端统一数据，不做任何前端计算（优先account，其次metrics）
+        const totalPnlAmount = account.total_pnl_amount ?? metrics.total_pnl_amount ?? 0;
+        const totalFees = account.fees ?? metrics.total_fees ?? 0;
+        const realizedPnl = account.realized_pnl ?? metrics.realized_pnl ?? 0;
         const positions = data.positions || [];
         
         // 完整的AI统计界面（模仿Alpha Arena）
