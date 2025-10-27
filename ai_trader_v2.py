@@ -557,6 +557,21 @@ Realized P&L: {realized_pnl:.2f}
     def _save_chat(self, decision, account, positions, prompt=""):
         """保存AI对话 - 包含完整的输入输出"""
         if not decision:
+            # API调用失败时，也保存一条错误记录
+            chat = {
+                'timestamp': time.time(),
+                'datetime': time.strftime('%m/%d %H:%M:%S'),
+                'trader': self.name,
+                'model': self.model,
+                'analysis': '⚠️ AI调用失败（API超时或网络错误），本轮跳过决策',
+                'trading_decision': {'decisions': {}},
+                'user_prompt': prompt[:200] + '...' if len(prompt) > 200 else prompt,
+                'cash': account.get('cash', 0) if account else 0,
+                'total_value': account.get('total_value', 0) if account else 0,
+                'positions': '',
+                'profit_loss_percent': 0
+            }
+            self.chat_history.append(chat)
             return
         
         analysis = decision.get('analysis', '分析中...')
