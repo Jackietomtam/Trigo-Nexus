@@ -255,57 +255,84 @@ Realized P&L: {realized_pnl:.2f}
         return prompt
     
     def _call_ai(self, prompt):
-        """调用AI API（Qwen用DashScope，DeepSeek用OpenRouter）"""
+        """调用AI API（Qwen用DashScope，DeepSeek用OpenRouter）- 支持重试机制"""
+        # 根据模型选择API
+        use_dashscope = 'qwen' in self.model.lower()
+        
+        # 重试配置
+        max_retries = 3
+        retry_delay = 5  # 秒
+        
+        for attempt in range(max_retries):
+            try:
+                if use_dashscope:
+                    # Qwen使用阿里云百炼 DashScope API（直接使用requests）
+                    print(f"  → {self.name} 使用DashScope API (尝试 {attempt + 1}/{max_retries})", flush=True)
+                    r = requests.post(
+                        "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {DASHSCOPE_API_KEY}",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "model": "qwen3-max",
+                            "messages": [
+                                {"role": "system", "content": f"You are {self.name}, a professional crypto trader. Analyze market data and return your decisions in this exact JSON format: {{\"analysis\": \"your 200-400 word market analysis\", \"decisions\": {{\"BTC\": {{\"signal\": \"hold/long/short\", \"leverage\": 10, \"percentage\": 20, \"confidence\": 0.75, \"stop_loss\": 0, \"profit_target\": 0, \"invalidation_condition\": \"\", \"risk_usd\": 0}}, \"ETH\": {{...}}}}}}. Include ALL coins (BTC, ETH, SOL, BNB, DOGE, XRP) in your response. Use 'hold' for no action."},
+                                {"role": "user", "content": prompt}
+                            ],
+                            "temperature": 0.6,
+                            "max_tokens": 2000
+                        },
+                        timeout=120  # 增加到120秒，降低超时概率
+                    )
+                    response = type('obj', (object,), {'status_code': r.status_code})()
+                    response_json = r.json() if r.status_code == 200 else {}
+                else:
+                    # DeepSeek使用阿里云百炼API（思考模式需要更长时间）
+                    print(f"  → {self.name} 使用阿里云百炼 DeepSeek API（思考模式，尝试 {attempt + 1}/{max_retries}）", flush=True)
+                    r = requests.post(
+                        "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {DASHSCOPE_DEEPSEEK_API_KEY}",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "model": "deepseek-v3.2-exp",
+                            "messages": [
+                                {"role": "system", "content": f"You are {self.name}, a professional crypto trader. Analyze market data and return your decisions in this exact JSON format: {{\"analysis\": \"your 200-400 word market analysis\", \"decisions\": {{\"BTC\": {{\"signal\": \"hold/long/short\", \"leverage\": 10, \"percentage\": 20, \"confidence\": 0.75, \"stop_loss\": 0, \"profit_target\": 0, \"invalidation_condition\": \"\", \"risk_usd\": 0}}, \"ETH\": {{...}}}}}}. Include ALL coins (BTC, ETH, SOL, BNB, DOGE, XRP) in your response. Use 'hold' for no action."},
+                                {"role": "user", "content": prompt}
+                            ],
+                            "temperature": 0.7,
+                            "max_tokens": 2000,
+                            "extra_body": {"enable_thinking": True}
+                        },
+                        timeout=120  # 增加到120秒，因为思考模式需要更长时间
+                    )
+                    response = type('obj', (object,), {'status_code': r.status_code})()
+                    response_json = r.json() if r.status_code == 200 else {}
+                
+                # API调用成功，跳出重试循环
+                break
+                
+            except requests.exceptions.Timeout as e:
+                if attempt < max_retries - 1:
+                    print(f"  ⚠️ {self.name} API超时（尝试 {attempt + 1}/{max_retries}），{retry_delay}秒后重试...", flush=True)
+                    time.sleep(retry_delay)
+                    continue
+                else:
+                    print(f"  ✗ {self.name} API调用失败（已重试{max_retries}次）: {e}", flush=True)
+                    return None
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(f"  ⚠️ {self.name} API错误（尝试 {attempt + 1}/{max_retries}）: {e}，{retry_delay}秒后重试...", flush=True)
+                    time.sleep(retry_delay)
+                    continue
+                else:
+                    print(f"  ✗ {self.name} API调用失败（已重试{max_retries}次）: {e}", flush=True)
+                    return None
+        
+        # 处理API响应
         try:
-            # 根据模型选择API
-            use_dashscope = 'qwen' in self.model.lower()
-            
-            if use_dashscope:
-                # Qwen使用阿里云百炼 DashScope API（直接使用requests）
-                print(f"  → {self.name} 使用DashScope API", flush=True)
-                r = requests.post(
-                    "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {DASHSCOPE_API_KEY}",
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "model": "qwen3-max",
-                        "messages": [
-                            {"role": "system", "content": f"You are {self.name}, a professional crypto trader. Analyze market data and return your decisions in this exact JSON format: {{\"analysis\": \"your 200-400 word market analysis\", \"decisions\": {{\"BTC\": {{\"signal\": \"hold/long/short\", \"leverage\": 10, \"percentage\": 20, \"confidence\": 0.75, \"stop_loss\": 0, \"profit_target\": 0, \"invalidation_condition\": \"\", \"risk_usd\": 0}}, \"ETH\": {{...}}}}}}. Include ALL coins (BTC, ETH, SOL, BNB, DOGE, XRP) in your response. Use 'hold' for no action."},
-                            {"role": "user", "content": prompt}
-                        ],
-                        "temperature": 0.6,
-                        "max_tokens": 2000
-                    },
-                    timeout=90  # 增加到90秒，与DeepSeek一致
-                )
-                response = type('obj', (object,), {'status_code': r.status_code})()
-                response_json = r.json() if r.status_code == 200 else {}
-            else:
-                # DeepSeek使用阿里云百炼API（思考模式需要更长时间）
-                print(f"  → {self.name} 使用阿里云百炼 DeepSeek API（思考模式）", flush=True)
-                r = requests.post(
-                    "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {DASHSCOPE_DEEPSEEK_API_KEY}",
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "model": "deepseek-v3.2-exp",
-                        "messages": [
-                            {"role": "system", "content": f"You are {self.name}, a professional crypto trader. Analyze market data and return your decisions in this exact JSON format: {{\"analysis\": \"your 200-400 word market analysis\", \"decisions\": {{\"BTC\": {{\"signal\": \"hold/long/short\", \"leverage\": 10, \"percentage\": 20, \"confidence\": 0.75, \"stop_loss\": 0, \"profit_target\": 0, \"invalidation_condition\": \"\", \"risk_usd\": 0}}, \"ETH\": {{...}}}}}}. Include ALL coins (BTC, ETH, SOL, BNB, DOGE, XRP) in your response. Use 'hold' for no action."},
-                            {"role": "user", "content": prompt}
-                        ],
-                        "temperature": 0.7,
-                        "max_tokens": 2000,
-                        "extra_body": {"enable_thinking": True}
-                    },
-                    timeout=90  # 增加到90秒，因为思考模式需要更长时间
-                )
-                response = type('obj', (object,), {'status_code': r.status_code})()
-                response_json = r.json() if r.status_code == 200 else {}
-            
             # 统一处理返回内容
             if response.status_code == 200:
                 content = response_json['choices'][0]['message']['content']
@@ -353,9 +380,8 @@ Realized P&L: {realized_pnl:.2f}
             else:
                 print(f"  ✗ {self.name} API返回状态码: {response.status_code}", flush=True)
                 return None
-            
         except Exception as e:
-            print(f"AI API调用失败: {e}", flush=True)
+            print(f"  ✗ {self.name} 处理API响应时出错: {e}", flush=True)
             return None
     
     def _fallback_decision(self, account, positions):
