@@ -314,9 +314,6 @@
         <div id="loadingState" class="loading">
             <div>Loading AI models...</div>
         </div>
-        
-        <!-- Debug Info -->
-        <div id="debugInfo"></div>
 
         <!-- Edition 1 Section -->
         <div id="edition1Section" class="edition-section" style="display:none;">
@@ -417,18 +414,6 @@
                 console.log('Edition 2 models:', edition2Models.length, edition2Models);
                 
                 // 显示调试信息在页面上
-                const debugInfo = document.getElementById('debugInfo');
-                if (debugInfo) {
-                    debugInfo.innerHTML = `
-                        <div style="background:#1a3a1a;color:#0f0;padding:10px;border-radius:8px;margin-bottom:20px;font-family:monospace;font-size:12px;">
-                            <strong>🔍 调试信息:</strong><br>
-                            总模型数: ${models.length}<br>
-                            Edition 1: ${edition1Models.length} 个 - ${edition1Models.map(m => m.name).join(', ')}<br>
-                            Edition 2: ${edition2Models.length} 个 - ${edition2Models.map(m => m.name).join(', ')}
-                        </div>
-                    `;
-                }
-                
                 // 清空容器
                 document.getElementById('edition1Grid').innerHTML = '';
                 document.getElementById('edition2Grid').innerHTML = '';
