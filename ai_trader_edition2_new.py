@@ -216,11 +216,16 @@ RSI indicators (14‑Period): {rsi14_series_fmt}
         realized_pnl = account.get('realized_pnl', 0)
         margin_used = account.get('margin_used', 0)
         
+        # 计算真实可用现金（防止出现负数）
+        available_cash = account.get('cash', 0) - margin_used
+        if available_cash < 0:
+            available_cash = 0.0
+        
         prompt += f"""
 HERE IS YOUR ACCOUNT INFORMATION & PERFORMANCE
 Current Total Return (percent): {account.get('profit_loss_percent', 0):.2f}%
 
-Available Cash: {account.get('cash', 0):.2f}
+Available Cash: {available_cash:.2f}
 
 Current Account Value: {account.get('total_value', 0):.2f}
 

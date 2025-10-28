@@ -459,3 +459,5 @@ echo "4. View logs: sudo journalctl -u ai-trader -f"
 
 
 
+
+

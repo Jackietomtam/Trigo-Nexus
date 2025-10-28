@@ -11,7 +11,7 @@ from config import OPENROUTER_API_KEY, DASHSCOPE_API_KEY, DASHSCOPE_DEEPSEEK_API
 class AITraderV2:
     """AI交易代理 - 杠杆版本"""
     
-    def __init__(self, trader_id, name, strategy, model, leverage_engine, kline_data, order_manager):
+    def __init__(self, trader_id, name, strategy, model, leverage_engine, kline_data, order_manager, temperature=0.3):
         self.trader_id = trader_id
         self.name = name
         self.strategy = strategy
@@ -23,6 +23,8 @@ class AITraderV2:
         # 统计与时间
         self.start_ts = time.time()
         self.invocations = 0
+        # AI参数（Edition 1默认0.3保守，Edition 2可以自定义）
+        self.temperature = temperature
         
     def make_decision(self):
         """做出交易决策"""
@@ -212,8 +214,10 @@ RSI indicators (14‑Period): {rsi14_series_fmt}
         realized_pnl = account.get('realized_pnl', 0)
         margin_used = account.get('margin_used', 0)
         
-        # 计算真实可用现金
+        # 计算真实可用现金（防止出现负数）
         available_cash = account.get('cash', 0) - margin_used
+        if available_cash < 0:
+            available_cash = 0.0
         
         prompt += f"""
 HERE IS YOUR ACCOUNT INFORMATION & PERFORMANCE
@@ -243,7 +247,8 @@ Realized P&L: {realized_pnl:.2f}
                 # 完整的持仓数据展示（字典格式，便于AI理解）
                 position_data = {
                     'symbol': symbol,
-                    'quantity': round(pos.get('quantity', 0), 2),
+                    # 使用更高精度展示数量，避免显示为 0.00 的错觉
+                    'quantity': round(pos.get('quantity', 0), 6),
                     'entry_price': round(pos.get('entry_price', 0), 2),
                     'current_price': round(pos.get('current_price', 0), 2),
                     'liquidation_price': round(pos.get('liquidation_price', 0), 2),
@@ -295,7 +300,7 @@ Realized P&L: {realized_pnl:.2f}
                                 {"role": "system", "content": f"You are {self.name}, a professional crypto trader. Analyze market data and return your decisions in this exact JSON format: {{\"analysis\": \"your 200-400 word market analysis\", \"decisions\": {{\"BTC\": {{\"signal\": \"hold/long/short\", \"leverage\": 10, \"percentage\": 20, \"confidence\": 0.75, \"stop_loss\": 0, \"profit_target\": 0, \"invalidation_condition\": \"\", \"risk_usd\": 0}}, \"ETH\": {{...}}}}}}. Include ALL coins (BTC, ETH, SOL, BNB, DOGE, XRP) in your response. Use 'hold' for no action."},
                                 {"role": "user", "content": prompt}
                             ],
-                            "temperature": 0.6,
+                            "temperature": self.temperature,
                             "max_tokens": 2000
                         },
                         timeout=120  # 增加到120秒，降低超时概率
@@ -317,7 +322,7 @@ Realized P&L: {realized_pnl:.2f}
                                 {"role": "system", "content": f"You are {self.name}, a professional crypto trader. Analyze market data and return your decisions in this exact JSON format: {{\"analysis\": \"your 200-400 word market analysis\", \"decisions\": {{\"BTC\": {{\"signal\": \"hold/long/short\", \"leverage\": 10, \"percentage\": 20, \"confidence\": 0.75, \"stop_loss\": 0, \"profit_target\": 0, \"invalidation_condition\": \"\", \"risk_usd\": 0}}, \"ETH\": {{...}}}}}}. Include ALL coins (BTC, ETH, SOL, BNB, DOGE, XRP) in your response. Use 'hold' for no action."},
                                 {"role": "user", "content": prompt}
                             ],
-                            "temperature": 0.7,
+                            "temperature": self.temperature,
                             "max_tokens": 2000,
                             "extra_body": {"enable_thinking": True}
                         },
@@ -515,8 +520,13 @@ Realized P&L: {realized_pnl:.2f}
             percentage = trade.get('percentage', 20)
             confidence = trade.get('confidence', 0.7)
             
-            available = account['cash'] - account['margin_used']
+            # 使用非负可用资金，并添加最小下单名义金额阈值，避免产生“尘埃仓位”
+            available = max(0.0, account['cash'] - account['margin_used'])
             invest = available * (percentage / 100)
+            min_notional_usd = 50.0
+            if invest * leverage < min_notional_usd:
+                print(f"  ⚠ {self.name} 跳过开多: 可用资金不足（<{min_notional_usd}名义金额） available={available:.2f} invest={invest:.2f}", flush=True)
+                return None
             quantity = (invest * leverage) / current_price if current_price > 0 else 0
 
             # 关键保护：投资额或数量无效则不下单，防止0数量“空持仓”
@@ -559,8 +569,12 @@ Realized P&L: {realized_pnl:.2f}
             percentage = trade.get('percentage', 20)
             confidence = trade.get('confidence', 0.7)
             
-            available = account['cash'] - account['margin_used']
+            available = max(0.0, account['cash'] - account['margin_used'])
             invest = available * (percentage / 100)
+            min_notional_usd = 50.0
+            if invest * leverage < min_notional_usd:
+                print(f"  ⚠ {self.name} 跳过开空: 可用资金不足（<{min_notional_usd}名义金额） available={available:.2f} invest={invest:.2f}", flush=True)
+                return None
             quantity = (invest * leverage) / current_price if current_price > 0 else 0
 
             # 关键保护：投资额或数量无效则不下单，防止0数量“空持仓”

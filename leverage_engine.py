@@ -319,6 +319,11 @@ class LeverageEngine:
         total_pnl_percent = (total_pnl_amount / initial_balance) * 100
         
         # === 账户概览 ===
+        # 计算可用资金（防止出现负数）
+        available_cash = account['cash'] - account['margin_used']
+        if available_cash < 0:
+            available_cash = 0.0
+
         metrics = {
             'trader_id': trader_id,
             'trader_name': account['name'],
@@ -326,7 +331,8 @@ class LeverageEngine:
             # 核心指标
             'initial_balance': initial_balance,
             'total_value': total_value,
-            'available_cash': account['cash'] - account['margin_used'],  # 可用现金 = 总现金 - 锁定保证金
+            'total_cash': account['cash'],              # 账户现金口径（Initial - Fees + Realized）
+            'available_cash': available_cash,           # 可用现金 = max(0, 总现金 - 锁定保证金)
             'margin_used': account['margin_used'],
             
             # 盈亏指标

@@ -22,7 +22,7 @@ class AITraderEdition2(AITraderV2):
     """Edition 2 AI交易员 - 继承Edition 1并添加新闻"""
     
     def __init__(self, model_id, name, model, strategy, account, leverage_engine, kline_data, order_manager):
-        # 调用父类初始化
+        # 调用父类初始化（Edition 2保持0.6，更灵活）
         super().__init__(
             trader_id=model_id,
             name=name,
@@ -30,7 +30,8 @@ class AITraderEdition2(AITraderV2):
             model=model,
             leverage_engine=leverage_engine,
             kline_data=kline_data,
-            order_manager=order_manager
+            order_manager=order_manager,
+            temperature=0.6  # Edition 2保持原来的0.6（对比Edition 1的0.3）
         )
         
         # Edition 2特有：新闻API

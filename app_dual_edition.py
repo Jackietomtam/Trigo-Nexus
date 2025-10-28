@@ -264,8 +264,18 @@ def trading_loop_edition2():
                             action = str(signal.get('signal', 'hold')).lower()
                             leverage = int(signal.get('leverage', 10))
                             percentage = float(signal.get('percentage', 0))
-                            available = account_info.get('cash', 0) - account_info.get('margin_used', 0)
+                            # 使用非负可用资金
+                            available = max(0.0, account_info.get('cash', 0) - account_info.get('margin_used', 0))
                             invest = max(0.0, available * (max(0.0, min(100.0, percentage)) / 100.0))
+                            
+                            # 添加最小名义金额阈值，避免产生"尘埃仓位"
+                            min_notional_usd = 50.0
+                            notional = invest * leverage
+                            if notional < min_notional_usd:
+                                if action != 'hold':
+                                    print(f"  ⚠ [E2] {trader.name} 跳过{action} {symbol}: 名义金额不足（${notional:.2f}<${min_notional_usd}）", flush=True)
+                                continue
+                            
                             quantity = (invest * leverage) / current_price if current_price > 0 else 0
                             
                             if action == 'long':
