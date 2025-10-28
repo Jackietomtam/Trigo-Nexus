@@ -117,6 +117,57 @@ class MarketData:
         except Exception as e:
             raise RuntimeError(f"Finnhub请求失败: {symbol} -> {e}")
 
+    def _get_klines_from_finnhub(self, symbol: str, limit: int = 500, interval: str = '1m') -> List[Dict[str, Any]]:
+        """从 Finnhub 获取加密货币K线，作为 Binance 失败时的兜底。"""
+        # Finnhub: /crypto/candle?symbol=BINANCE:BTCUSDT&resolution=1&from=...&to=...
+        pair = CRYPTO_SYMBOLS.get(symbol)
+        if not pair:
+            raise ValueError(f"不支持的币种: {symbol}")
+        finnhub_symbol = f"BINANCE:{pair}"
+        # 分辨率映射
+        res_map = { '1m': '1', '3m': '3', '5m': '5', '15m': '15', '30m': '30', '1h': '60' }
+        resolution = res_map.get(interval, '1')
+        now = int(time.time())
+        window_sec = 60
+        try:
+            _limit = max(1, min(limit, 1000))
+            ts_from = now - _limit * window_sec * 2  # 留余量保证足够根数
+            url = "https://finnhub.io/api/v1/crypto/candle"
+            resp = requests.get(
+                url,
+                params={
+                    'symbol': finnhub_symbol,
+                    'resolution': resolution,
+                    'from': ts_from,
+                    'to': now,
+                    'token': FINNHUB_API_KEY
+                },
+                timeout=12
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            if not isinstance(data, dict) or data.get('s') != 'ok':
+                raise RuntimeError(f"Finnhub返回异常: {data}")
+            t = data.get('t', [])
+            o = data.get('o', [])
+            h = data.get('h', [])
+            l = data.get('l', [])
+            c = data.get('c', [])
+            v = data.get('v', [])
+            candles: List[Dict[str, Any]] = []
+            for i in range(min(len(t), _limit)):
+                candles.append({
+                    'timestamp': int(t[i]),
+                    'open': float(o[i]),
+                    'high': float(h[i]),
+                    'low': float(l[i]),
+                    'close': float(c[i]),
+                    'volume': float(v[i]) if i < len(v) else 0.0
+                })
+            return candles[-_limit:]
+        except Exception as e:
+            raise RuntimeError(f"Finnhub K线获取失败: {symbol} -> {e}")
+
     # -------- Backup: CoinGecko API --------
     def _get_price_from_coingecko(self, symbol: str) -> tuple[float, float]:
         """从 CoinGecko 获取价格（备选方案）"""
@@ -150,7 +201,7 @@ class MarketData:
 
     # -------- Realtime Prices --------
     def get_crypto_price(self, symbol: str) -> float:
-        """获取单个加密货币的实时价格（Finnhub 优先，Binance 备选）"""
+        """获取单个加密货币的实时价格（Binance 优先，Finnhub 备选）"""
         current_time = time.time()
         # 每个币种独立缓存判断
         if symbol in self.prices and symbol in self.last_update and (current_time - self.last_update[symbol]) < PRICE_REFRESH_SECONDS:
@@ -160,26 +211,26 @@ class MarketData:
         if not pair:
             raise ValueError(f"不支持的币种: {symbol}")
 
-        # 第一优先：Finnhub（适合 Render 部署，不会被封锁）
+        # 第一优先：Binance（速度快、覆盖广）
         try:
-            price, change_percent = self._get_price_from_finnhub(symbol)
-            print(f"✓ {symbol} Finnhub价格: ${price:,.2f} ({change_percent:+.2f}%)")
+            data = self._binance_get('/api/v3/ticker/24hr', {'symbol': pair})
+            price = float(data['lastPrice'])
+            change_percent = float(data['priceChangePercent'])
+            print(f"✓ {symbol} Binance价格: ${price:,.2f} ({change_percent:+.2f}%)")
         except Exception as e1:
-            # Finnhub 失败，尝试 Binance
-            print(f"⚠ {symbol} Finnhub失败，切换Binance: {e1}")
+            # Binance 失败，尝试 Finnhub（更稳定但可能有频率限制）
+            print(f"⚠ {symbol} Binance失败，切换Finnhub: {e1}")
             try:
-                data = self._binance_get('/api/v3/ticker/24hr', {'symbol': pair})
-                price = float(data['lastPrice'])
-                change_percent = float(data['priceChangePercent'])
-                print(f"✓ {symbol} Binance价格: ${price:,.2f} ({change_percent:+.2f}%)")
+                price, change_percent = self._get_price_from_finnhub(symbol)
+                print(f"✓ {symbol} Finnhub价格: ${price:,.2f} ({change_percent:+.2f}%)")
             except Exception as e2:
-                # Binance 也失败，最后尝试 CoinGecko
-                print(f"⚠ {symbol} Binance也失败，切换CoinGecko: {e2}")
+                # 都失败，再尝试 CoinGecko 兜底
+                print(f"⚠ {symbol} Finnhub也失败，切换CoinGecko: {e2}")
                 try:
                     price, change_percent = self._get_price_from_coingecko(symbol)
                     print(f"✓ {symbol} CoinGecko价格: ${price:,.2f} ({change_percent:+.2f}%)")
                 except Exception as e3:
-                    print(f"❌ {symbol} 所有数据源都失败: Finnhub/Binance/CoinGecko")
+                    print(f"❌ {symbol} 所有数据源都失败: Binance/Finnhub/CoinGecko")
                     raise
 
         self.prices[symbol] = price
@@ -205,27 +256,33 @@ class MarketData:
         if not pair:
             raise ValueError(f"不支持的币种: {symbol}")
 
-        # 直接取最近 KLINE_LIMIT 根，满足前端和指标计算需求
-        raw = self._binance_get('/api/v3/klines', {
-            'symbol': pair,
-            'interval': KLINE_INTERVAL,
-            'limit': KLINE_LIMIT
-        })
-
-        candles: List[Dict[str, Any]] = []
-        for k in raw:
-            # Binance返回: [openTime, open, high, low, close, volume, closeTime, ...]
-            candles.append({
-                'timestamp': int(k[0]),           # 毫秒
-                'open': float(k[1]),
-                'high': float(k[2]),
-                'low': float(k[3]),
-                'close': float(k[4]),
-                'volume': float(k[5])
+        try:
+            raw = self._binance_get('/api/v3/klines', {
+                'symbol': pair,
+                'interval': KLINE_INTERVAL,
+                'limit': KLINE_LIMIT
             })
-
-        print(f"✓ {symbol} Binance历史K线: {len(candles)} 根", flush=True)
-        return candles
+            candles: List[Dict[str, Any]] = []
+            for k in raw:
+                candles.append({
+                    'timestamp': int(k[0]),
+                    'open': float(k[1]),
+                    'high': float(k[2]),
+                    'low': float(k[3]),
+                    'close': float(k[4]),
+                    'volume': float(k[5])
+                })
+            print(f"✓ {symbol} Binance历史K线: {len(candles)} 根", flush=True)
+            return candles
+        except Exception as e1:
+            print(f"⚠ {symbol} Binance历史K线失败，切换Finnhub: {e1}")
+            try:
+                candles = self._get_klines_from_finnhub(symbol, limit=KLINE_LIMIT, interval=KLINE_INTERVAL)
+                print(f"✓ {symbol} Finnhub历史K线: {len(candles)} 根", flush=True)
+                return candles
+            except Exception as e2:
+                print(f"❌ {symbol} 历史K线全部数据源失败: {e2}")
+                return []
 
     # -------- Futures Metrics (OI & Funding) --------
     def get_open_interest(self, symbol: str) -> float:
@@ -273,20 +330,28 @@ class MarketData:
         pair = CRYPTO_SYMBOLS.get(symbol)
         if not pair:
             raise ValueError(f"不支持的币种: {symbol}")
-        raw = self._binance_get('/api/v3/klines', {
-            'symbol': pair,
-            'interval': KLINE_INTERVAL,
-            'limit': max(1, min(limit, 1000))
-        })
-        recent: List[Dict[str, Any]] = []
-        for k in raw:
-            recent.append({
-                'timestamp': int(k[0]),
-                'open': float(k[1]),
-                'high': float(k[2]),
-                'low': float(k[3]),
-                'close': float(k[4]),
-                'volume': float(k[5])
+        try:
+            raw = self._binance_get('/api/v3/klines', {
+                'symbol': pair,
+                'interval': KLINE_INTERVAL,
+                'limit': max(1, min(limit, 1000))
             })
-        return recent
+            recent: List[Dict[str, Any]] = []
+            for k in raw:
+                recent.append({
+                    'timestamp': int(k[0]),
+                    'open': float(k[1]),
+                    'high': float(k[2]),
+                    'low': float(k[3]),
+                    'close': float(k[4]),
+                    'volume': float(k[5])
+                })
+            return recent
+        except Exception as e1:
+            print(f"⚠ {symbol} Binance近期K线失败，切换Finnhub: {e1}")
+            try:
+                return self._get_klines_from_finnhub(symbol, limit=limit, interval=KLINE_INTERVAL)
+            except Exception as e2:
+                print(f"❌ {symbol} 近期K线全部数据源失败: {e2}")
+                return []
 

@@ -141,3 +141,5 @@ echo "3. Start service:"
 echo -e "   ${GREEN}ssh -i $KEY_FILE $EC2_USER@$EC2_IP 'sudo systemctl start ai-trader'${NC}"
 echo ""
 
+
+

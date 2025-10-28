@@ -457,3 +457,5 @@ echo "4. View logs: sudo journalctl -u ai-trader -f"
 
 **部署完成后，记得在浏览器访问并验证所有功能正常运行！**
 
+
+

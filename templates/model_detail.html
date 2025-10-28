@@ -120,7 +120,7 @@
                                 <h2 style="color:#fff;font-size:24px;margin:0;line-height:1;">${acc.name||''}</h2>
                                 ${editionBadge}
                             </div>
-                            <div style="font-size:13px;color:#999;">Total Account Value: <span style="color:#fff;font-weight:700;">$${fn(acc.total_value||0)}</span> · Available Cash: <span style="color:#fff;font-weight:700;">$${fn(acc.cash||0)}</span></div>
+                            <div style="font-size:13px;color:#999;">Total Account Value: <span style="color:#fff;font-weight:700;">$${fn(acc.total_value||0)}</span> · Available Cash: <span style="color:#fff;font-weight:700;">$${fn((acc.cash||0) - (acc.margin_used||0))}</span></div>
                         </div>
                     </div>
 

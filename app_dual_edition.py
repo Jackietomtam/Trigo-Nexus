@@ -695,6 +695,11 @@ def api_model_detail(model_id: str):
     
     account = engine.accounts.get(trader_id, {})
     positions = engine.get_positions(trader_id)
+    # 过滤异常/空持仓（quantity<=0）
+    try:
+        positions = {sym: pos for sym, pos in positions.items() if float(pos.get('quantity', 0)) > 0}
+    except Exception:
+        pass
     
     # 计算总盈亏 (realized + unrealized)
     realized_pnl = account.get('realized_pnl', 0)
@@ -781,7 +786,7 @@ def api_model_detail(model_id: str):
         'model': trader.model,
         'strategy': trader.strategy,
         'account': account,
-        'positions': list(positions.values()),  # 转换为列表
+        'positions': list(positions.values()),  # 转换为列表（已过滤零数量）
         'trades': combined_trades[:100],  # 合并后的交易记录（含开仓+平仓）
         'last_trades': combined_trades[:100],  # 兼容前端的字段名
         'chat_history': trader.chat_history[-20:],  # 最近20条分析

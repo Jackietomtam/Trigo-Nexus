@@ -22,11 +22,34 @@ class AlphaArena {
         this.initChart();
         this.setupEvents();
         this.loadAll();
+        
+        // 定期更新历史数据（每30秒更新一次图表）
+        setInterval(() => {
+            this.api('/api/history').then(hist => {
+                if (hist) this.updateChart(hist);
+            }).catch(e => console.error('更新历史数据失败:', e));
+        }, 30000);
     }
 
     initSocket() {
         this.socket = io();
         this.socket.on('connect', () => console.log('✓ 已连接'));
+        
+        // 根据当前页面监听对应的事件
+        const currentPath = window.location.pathname;
+        if (currentPath.includes('/edition1')) {
+            this.socket.on('edition1_update', (d) => this.onUpdate(d));
+            console.log('监听 edition1_update 事件');
+        } else if (currentPath.includes('/edition2')) {
+            this.socket.on('edition2_update', (d) => this.onUpdate(d));
+            console.log('监听 edition2_update 事件');
+        } else {
+            // 默认监听两个事件
+            this.socket.on('edition1_update', (d) => this.onUpdate(d));
+            this.socket.on('edition2_update', (d) => this.onUpdate(d));
+        }
+        
+        // 兼容旧的 market_update 事件
         this.socket.on('market_update', (d) => this.onUpdate(d));
     }
 
@@ -1033,7 +1056,7 @@ class AlphaArena {
                     <div>
                         <h3 style="color:#fff;font-size:18px;margin:0;">${account.name}</h3>
                         <p style="color:#666;font-size:11px;margin:4px 0 0;">Total Account Value: <span style="color:#fff;font-weight:700;">$${this.fn(account.total_value)}</span></p>
-                        <p style="color:#666;font-size:11px;margin:4px 0 0;">Available Cash: <span style="color:#fff;font-weight:700;">$${this.fn(account.cash)}</span></p>
+                        <p style="color:#666;font-size:11px;margin:4px 0 0;">Available Cash: <span style="color:#fff;font-weight:700;">$${this.fn(metrics.available_cash ?? (account.cash - account.margin_used))}</span></p>
                     </div>
                 </div>
                 

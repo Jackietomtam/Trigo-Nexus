@@ -200,3 +200,5 @@ echo -e "${YELLOW}Optional: Enable HTTPS${NC}"
 echo "   sudo certbot --nginx -d your-domain.com"
 echo ""
 
+
+

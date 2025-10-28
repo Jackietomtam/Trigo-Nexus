@@ -146,3 +146,5 @@ ssh -i ~/Downloads/trigo-key.pem ubuntu@3.106.191.40 \
 - 查看日志: `ssh -i ~/Downloads/trigo-key.pem ubuntu@3.106.191.40 'sudo journalctl -u ai-trader -f'`
 - 联系支持或查看文档
 
+
+

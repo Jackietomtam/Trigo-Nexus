@@ -62,14 +62,26 @@ class LeverageEngine:
         
         account = self.accounts[trader_id]
         
+        # 基本参数校验，避免出现 quantity=0 导致的“空持仓”
+        if quantity is None or price is None or leverage is None:
+            return {'success': False, 'error': '参数缺失'}
+        try:
+            q = float(quantity)
+            p = float(price)
+            lev = float(leverage)
+        except Exception:
+            return {'success': False, 'error': '参数类型错误'}
+        if q <= 0 or p <= 0 or lev <= 0:
+            return {'success': False, 'error': '无效下单参数'}
+        
         # 计算所需保证金
-        notional = quantity * price
-        margin_required = notional / leverage
+        notional = q * p
+        margin_required = notional / lev
         fee = notional * 0.001  # 0.1% 手续费
         
         # 检查可用资金
         available = account['cash'] - account['margin_used']
-        if margin_required + fee > available:
+        if margin_required + fee > available or margin_required <= 0:
             return {'success': False, 'error': '保证金不足'}
         
         # 计算清算价格
@@ -84,10 +96,10 @@ class LeverageEngine:
         position = {
             'symbol': symbol,
             'side': side,
-            'quantity': quantity,
-            'entry_price': price,
-            'current_price': price,
-            'leverage': leverage,
+            'quantity': q,
+            'entry_price': p,
+            'current_price': p,
+            'leverage': lev,
             'margin': margin_required,
             'liquidation_price': liquidation_price,
             'unrealized_pnl': 0,
@@ -118,9 +130,9 @@ class LeverageEngine:
             'symbol': symbol,
             'action': 'open_' + side,
             'side': side,
-            'quantity': quantity,
-            'price': price,
-            'leverage': leverage,
+            'quantity': q,
+            'price': p,
+            'leverage': lev,
             'notional': notional,
             'margin': margin_required,
             'timestamp': time.time(),
@@ -314,7 +326,7 @@ class LeverageEngine:
             # 核心指标
             'initial_balance': initial_balance,
             'total_value': total_value,
-            'available_cash': account['cash'],
+            'available_cash': account['cash'] - account['margin_used'],  # 可用现金 = 总现金 - 锁定保证金
             'margin_used': account['margin_used'],
             
             # 盈亏指标
