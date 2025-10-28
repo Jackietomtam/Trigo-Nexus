@@ -65,6 +65,42 @@ API Key: d1ivl31r01qhbuvsiufgd1ivl31r01qhbuvsiug0
 备用端点: api1.binance.com, api2.binance.com, api3.binance.com, api4.binance.com
 ```
 
+### 加密货币新闻API
+
+#### CryptoPanic API（主要新闻源）
+```
+API Key: 1bdc562bbcded391ee4e55d902b06532a83a1bc0
+用途: 加密货币新闻聚合、社区投票、情绪分析
+限制: 免费版20次/分钟
+文档: https://cryptopanic.com/developers/api/
+端点: https://cryptopanic.com/api/v1/posts/
+特性: 支持币种过滤、重要性评分、多平台聚合
+```
+
+#### CryptoCompare API（完全免费）
+```
+用途: 加密货币新闻
+特点: 无需API Key，无限制
+端点: https://min-api.cryptocompare.com/data/v2/news/
+文档: https://min-api.cryptocompare.com/
+```
+
+#### Messari API（研究报告）
+```
+用途: 专业加密货币研究报告
+特点: 无需API Key
+端点: https://data.messari.io/api/v1/news
+文档: https://messari.io/api
+```
+
+#### CoinGecko API（市场数据+新闻）
+```
+用途: 加密货币价格和新闻
+特点: 无需API Key，50次/分钟
+端点: https://api.coingecko.com/api/v3/
+文档: https://www.coingecko.com/en/api
+```
+
 ---
 
 ## 💻 GitHub信息

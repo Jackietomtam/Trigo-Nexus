@@ -43,10 +43,10 @@ class AITraderEdition2(AITraderV2):
         
         print(f"  ✅ {self.name} 初始化完成 [Edition 2 - With News]")
     
-    def _get_recent_news(self, minutes: int = 15) -> Optional[str]:
+    def _get_recent_news(self, minutes: int = 3) -> Optional[str]:
         """
         获取最近N分钟的原始新闻（不做任何AI分析）
-        默认15分钟窗口，因为币圈新闻不是每分钟都有
+        默认3分钟窗口，确保新闻实时性
             
         Returns:
             格式化的原始新闻列表，如果没有新闻返回None
@@ -85,9 +85,9 @@ class AITraderEdition2(AITraderV2):
                 except Exception:
                     continue
             
-            # 如果没有最近N分钟的新闻，显示最新的3条
+            # 如果没有最近N分钟的新闻，显示最新的5条（4个API源，总能找到）
             if not recent_news:
-                recent_news = news_items[:3]  # 至少显示最新的3条新闻
+                recent_news = news_items[:5]  # 至少显示最新的5条新闻
             
             # 格式化原始新闻列表（使用Edition 1的英文风格）
             summary = f"\n\nRECENT NEWS (Past {minutes} Minutes)\n\n"
@@ -122,8 +122,8 @@ class AITraderEdition2(AITraderV2):
         # 调用父类的prompt构建方法（Edition 1的完整prompt）
         base_prompt = super()._build_detailed_prompt(account, positions, indicators)
         
-        # 尝试获取最近15分钟的新闻（币圈新闻更新频率较低）
-        recent_news = self._get_recent_news(minutes=15)
+        # 尝试获取最近3分钟的新闻（4个API源，确保覆盖率）
+        recent_news = self._get_recent_news(minutes=3)
         
         # 如果有新闻，在Sharpe Ratio之前插入新闻部分
         if recent_news:
@@ -136,7 +136,7 @@ class AITraderEdition2(AITraderV2):
                 print(f"  📰 [{self.name}] Prompt长度: {len(base_prompt)} -> {len(enhanced_prompt)}", flush=True)
                 return enhanced_prompt
         else:
-            print(f"  ℹ️  [{self.name}] 最近15分钟无新闻，使用Edition 1 prompt", flush=True)
+            print(f"  ℹ️  [{self.name}] 最近3分钟无新闻，使用Edition 1 prompt", flush=True)
         
         # 如果没有新闻，直接返回Edition 1的prompt
         return base_prompt

@@ -11,13 +11,21 @@ from typing import List, Dict, Optional
 import time
 
 class CryptoNewsAPI:
-    """加密货币新闻API封装"""
+    """加密货币新闻API封装 - 整合4个主要新闻源"""
     
-    def __init__(self):
+    def __init__(self, cryptopanic_key: str = "1bdc562bbcded391ee4e55d902b06532a83a1bc0"):
+        # API端点
         self.cryptocompare_base = "https://min-api.cryptocompare.com/data/v2/news/"
         self.messari_base = "https://data.messari.io/api/v1/news"
+        self.cryptopanic_base = "https://cryptopanic.com/api/v1/posts/"
+        self.coingecko_base = "https://api.coingecko.com/api/v3/"
+        
+        # CryptoPanic API Key
+        self.cryptopanic_key = cryptopanic_key
+        
+        # 缓存设置
         self.cache = {}
-        self.cache_expiry = 300  # 5分钟缓存
+        self.cache_expiry = 60  # 1分钟缓存（降低缓存时间）
         
     def get_latest_news(self, 
                        limit: int = 10,
@@ -40,23 +48,43 @@ class CryptoNewsAPI:
             if time.time() - cached_time < self.cache_expiry:
                 return cached_data
         
-        # 获取新闻
+        # 获取新闻（从4个源聚合）
         news_items = []
         
-        # 1. 尝试CryptoCompare（主要来源）
+        # 1. CryptoPanic（主要来源 - 有API Key，数据质量最好）
         try:
-            cc_news = self._get_cryptocompare_news(limit, categories)
-            news_items.extend(cc_news)
+            cp_news = self._get_cryptopanic_news(limit, categories)
+            news_items.extend(cp_news)
+            print(f"  ✅ CryptoPanic: {len(cp_news)} 条新闻")
         except Exception as e:
-            print(f"⚠️  CryptoCompare API 错误: {e}")
+            print(f"  ⚠️  CryptoPanic API 错误: {e}")
         
-        # 2. 尝试Messari（补充来源）
+        # 2. CryptoCompare（免费，稳定）
+        if len(news_items) < limit:
+            try:
+                cc_news = self._get_cryptocompare_news(limit, categories)
+                news_items.extend(cc_news)
+                print(f"  ✅ CryptoCompare: {len(cc_news)} 条新闻")
+            except Exception as e:
+                print(f"  ⚠️  CryptoCompare API 错误: {e}")
+        
+        # 3. CoinGecko（补充来源）
+        if len(news_items) < limit:
+            try:
+                cg_news = self._get_coingecko_news(limit - len(news_items))
+                news_items.extend(cg_news)
+                print(f"  ✅ CoinGecko: {len(cg_news)} 条新闻")
+            except Exception as e:
+                print(f"  ⚠️  CoinGecko API 错误: {e}")
+        
+        # 4. Messari（研究报告）
         if len(news_items) < limit:
             try:
                 messari_news = self._get_messari_news(limit - len(news_items))
                 news_items.extend(messari_news)
+                print(f"  ✅ Messari: {len(messari_news)} 条研究报告")
             except Exception as e:
-                print(f"⚠️  Messari API 错误: {e}")
+                print(f"  ⚠️  Messari API 错误: {e}")
         
         # 按时间排序
         news_items.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
@@ -148,6 +176,126 @@ class CryptoNewsAPI:
             })
         
         return news_items
+    
+    def _get_cryptopanic_news(self, 
+                             limit: int,
+                             categories: Optional[List[str]] = None) -> List[Dict]:
+        """从CryptoPanic获取新闻（需要API Key）"""
+        
+        params = {
+            "auth_token": self.cryptopanic_key,
+            "kind": "news",  # news, media, all
+            "filter": "rising",  # rising, hot, bullish, bearish, important, saved, lol
+        }
+        
+        # 添加币种过滤
+        if categories:
+            # CryptoPanic使用逗号分隔的币种代码
+            params["currencies"] = ",".join(categories)
+        
+        response = requests.get(
+            self.cryptopanic_base,
+            params=params,
+            timeout=10
+        )
+        
+        if response.status_code != 200:
+            raise Exception(f"HTTP {response.status_code}")
+        
+        data = response.json()
+        news_items = []
+        
+        for item in data.get('results', [])[:limit]:
+            # 解析时间
+            published_at = item.get('published_at', '')
+            try:
+                timestamp = int(datetime.fromisoformat(published_at.replace('Z', '+00:00')).timestamp())
+                time_str = datetime.fromisoformat(published_at.replace('Z', '+00:00')).strftime('%Y-%m-%d %H:%M')
+            except:
+                timestamp = 0
+                time_str = published_at
+            
+            # 提取币种标签
+            currencies = [c['code'] for c in item.get('currencies', [])]
+            
+            # 获取投票数据（情绪指标）
+            votes = item.get('votes', {})
+            positive = votes.get('positive', 0)
+            negative = votes.get('negative', 0)
+            total_votes = positive + negative
+            sentiment = "neutral"
+            if total_votes > 0:
+                if positive > negative * 1.5:
+                    sentiment = "bullish"
+                elif negative > positive * 1.5:
+                    sentiment = "bearish"
+            
+            news_items.append({
+                'title': item.get('title', 'N/A'),
+                'source': item.get('source', {}).get('title', 'CryptoPanic'),
+                'time': time_str,
+                'timestamp': timestamp,
+                'url': item.get('url', ''),
+                'summary': item.get('title', '')[:200],
+                'categories': currencies,
+                'sentiment': sentiment,
+                'votes': {'positive': positive, 'negative': negative},
+                'type': 'news'
+            })
+        
+        return news_items
+    
+    def _get_coingecko_news(self, limit: int) -> List[Dict]:
+        """从CoinGecko获取新闻（通过status_updates端点）"""
+        
+        try:
+            # CoinGecko的状态更新端点
+            response = requests.get(
+                f"{self.coingecko_base}status_updates",
+                params={
+                    "category": "general",
+                    "per_page": limit
+                },
+                timeout=10
+            )
+            
+            if response.status_code != 200:
+                raise Exception(f"HTTP {response.status_code}")
+            
+            data = response.json()
+            news_items = []
+            
+            for item in data.get('status_updates', [])[:limit]:
+                # 解析时间
+                created_at = item.get('created_at', '')
+                try:
+                    timestamp = int(datetime.fromisoformat(created_at.replace('Z', '+00:00')).timestamp())
+                    time_str = datetime.fromisoformat(created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d %H:%M')
+                except:
+                    timestamp = 0
+                    time_str = created_at
+                
+                # 提取项目信息
+                project = item.get('project', {})
+                project_name = project.get('name', 'CoinGecko')
+                
+                news_items.append({
+                    'title': item.get('description', 'N/A')[:100],
+                    'source': project_name,
+                    'time': time_str,
+                    'timestamp': timestamp,
+                    'url': item.get('project', {}).get('image', {}).get('large', ''),
+                    'summary': item.get('description', '')[:200],
+                    'categories': [project.get('symbol', '').upper()] if project.get('symbol') else [],
+                    'type': 'update'
+                })
+            
+            return news_items
+            
+        except Exception as e:
+            # CoinGecko的status_updates可能不稳定，降级处理
+            print(f"    CoinGecko status_updates失败，使用trending端点: {e}")
+            return []
     
     def get_news_summary(self, limit: int = 5) -> str:
         """
