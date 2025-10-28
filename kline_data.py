@@ -173,18 +173,18 @@ class KLineData:
             'volume': latest.get('volume', 0)
         }
         
-        # 计算一些序列（用于AI分析）
-        recent_10 = df.tail(10)
-        indicators['price_series'] = recent_10['close'].tolist()
+        # 计算一些序列（用于AI分析）- 扩展到30个数据点
+        recent_30 = df.tail(30)
+        indicators['price_series'] = recent_30['close'].tolist()
         
-        if 'EMA_20' in recent_10.columns:
-            indicators['ema_20_series'] = recent_10['EMA_20'].tolist()
-        if 'MACD_12_26_9' in recent_10.columns:
-            indicators['macd_series'] = recent_10['MACD_12_26_9'].tolist()
-        if 'RSI_7' in recent_10.columns:
-            indicators['rsi_7_series'] = recent_10['RSI_7'].tolist()
-        if 'RSI_14' in recent_10.columns:
-            indicators['rsi_14_series'] = recent_10['RSI_14'].tolist()
+        if 'EMA_20' in recent_30.columns:
+            indicators['ema_20_series'] = recent_30['EMA_20'].tolist()
+        if 'MACD_12_26_9' in recent_30.columns:
+            indicators['macd_series'] = recent_30['MACD_12_26_9'].tolist()
+        if 'RSI_7' in recent_30.columns:
+            indicators['rsi_7_series'] = recent_30['RSI_7'].tolist()
+        if 'RSI_14' in recent_30.columns:
+            indicators['rsi_14_series'] = recent_30['RSI_14'].tolist()
         
         return indicators
     
