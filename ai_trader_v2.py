@@ -226,26 +226,38 @@ Total Fees Paid: {total_fees:.2f}
 
 Realized P&L: {realized_pnl:.2f}
 """
-        # 当前持仓（详细格式）
+        # 当前持仓（增强版：完整数据格式）
         if positions:
-            prompt += f"\nCurrent live positions ({len(positions)} total):\n"
+            prompt += f"\nCurrent live positions & performance:"
             for symbol, pos in positions.items():
-                inv = pos.get('invalidation_condition', '').replace("'", "\\'") if 'invalidation_condition' in pos else ''
-                pt = pos.get('profit_target', 0)
-                sl = pos.get('stop_loss', 0)
-                side = pos.get('side', 'long')
-                entry_time = pos.get('entry_time', 0)
+                # 构建exit_plan字典
+                exit_plan = {
+                    'profit_target': pos.get('profit_target', 0),
+                    'stop_loss': pos.get('stop_loss', 0),
+                    'invalidation_condition': pos.get('invalidation_condition', '')
+                }
                 
-                prompt += f"""
-  • {symbol} {side.upper()} {pos['leverage']}x
-    Quantity: {pos['quantity']:.4f} | Entry: ${pos['entry_price']:.2f} | Current: ${pos['current_price']:.2f}
-    Unrealized P&L: ${pos['unrealized_pnl']:.2f} | Liquidation: ${pos['liquidation_price']:.2f}
-    Stop Loss: ${sl:.2f} | Profit Target: ${pt:.2f}
-    Invalidation: {inv or 'None'}
-    Confidence: {pos.get('confidence', 0.0):.0%} | Risk: ${pos.get('risk_usd', 0.0):.2f}
-"""
+                # 完整的持仓数据展示（字典格式，便于AI理解）
+                position_data = {
+                    'symbol': symbol,
+                    'quantity': round(pos.get('quantity', 0), 2),
+                    'entry_price': round(pos.get('entry_price', 0), 2),
+                    'current_price': round(pos.get('current_price', 0), 2),
+                    'liquidation_price': round(pos.get('liquidation_price', 0), 2),
+                    'unrealized_pnl': round(pos.get('unrealized_pnl', 0), 2),
+                    'leverage': pos.get('leverage', 1),
+                    'exit_plan': exit_plan,
+                    'confidence': pos.get('confidence', 0.0),
+                    'risk_usd': round(pos.get('risk_usd', 0), 2),
+                    'sl_oid': pos.get('sl_oid', -1),
+                    'tp_oid': pos.get('tp_oid', -1),
+                    'wait_for_fill': pos.get('wait_for_fill', False),
+                    'entry_oid': pos.get('entry_oid', -1),
+                    'notional_usd': round(pos.get('quantity', 0) * pos.get('current_price', 0), 2)
+                }
+                prompt += f" {position_data}"
         else:
-            prompt += "\nNo current positions.\n"
+            prompt += "\n\nNo current positions.\n"
 
         sharpe = account.get('sharpe', None)
         prompt += f"\nSharpe Ratio: {sharpe if sharpe is not None else 'N/A'}\n"
@@ -502,7 +514,12 @@ Realized P&L: {realized_pnl:.2f}
             
             available = account['cash'] - account['margin_used']
             invest = available * (percentage / 100)
-            quantity = (invest * leverage) / current_price
+            quantity = (invest * leverage) / current_price if current_price > 0 else 0
+
+            # 关键保护：投资额或数量无效则不下单，防止0数量“空持仓”
+            if invest <= 0 or quantity <= 0 or leverage <= 0:
+                print(f"  ⚠ {self.name} 跳过开多: 投资额/数量/杠杆无效 invest={invest:.4f} qty={quantity:.8f} lev={leverage}", flush=True)
+                return None
             
             # 使用AI提供的止盈止损，或使用默认值
             profit_target = trade.get('profit_target', 0)
@@ -541,7 +558,12 @@ Realized P&L: {realized_pnl:.2f}
             
             available = account['cash'] - account['margin_used']
             invest = available * (percentage / 100)
-            quantity = (invest * leverage) / current_price
+            quantity = (invest * leverage) / current_price if current_price > 0 else 0
+
+            # 关键保护：投资额或数量无效则不下单，防止0数量“空持仓”
+            if invest <= 0 or quantity <= 0 or leverage <= 0:
+                print(f"  ⚠ {self.name} 跳过开空: 投资额/数量/杠杆无效 invest={invest:.4f} qty={quantity:.8f} lev={leverage}", flush=True)
+                return None
             
             # 使用AI提供的止盈止损，或使用默认值（空仓反向）
             profit_target = trade.get('profit_target', 0)
