@@ -839,6 +839,14 @@ def init_trading_system():
     initialize_traders_edition1()
     initialize_traders_edition2()
     
+    # 🔧 修复历史数据：同步 margin_used
+    print("\n🔧 检查并修复 margin_used...", flush=True)
+    try:
+        leverage_engine_e1.fix_margin_used_all()
+        leverage_engine_e2.fix_margin_used_all()
+    except Exception as e:
+        print(f"⚠️ margin_used 修复出错: {e}", flush=True)
+    
     # 启动两个独立的交易循环
     system_running_e1 = True
     system_running_e2 = True

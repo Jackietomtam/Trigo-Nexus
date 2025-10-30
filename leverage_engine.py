@@ -218,6 +218,7 @@ class LeverageEngine:
         """更新所有持仓的未实现盈亏"""
         for trader_id, positions in self.positions.items():
             total_unrealized = 0
+            total_margin = 0  # 重新计算实际使用的保证金
             
             for symbol, pos in positions.items():
                 if symbol in current_prices:
@@ -233,6 +234,9 @@ class LeverageEngine:
                     pos['unrealized_pnl'] = unrealized
                     total_unrealized += unrealized
                     
+                    # 累加实际持仓的保证金
+                    total_margin += pos.get('margin', 0)
+                    
                     # 检查是否触及清算价
                     if pos['side'] == 'long' and current_price <= pos['liquidation_price']:
                         self.liquidate_position(trader_id, symbol, current_price)
@@ -242,6 +246,12 @@ class LeverageEngine:
             # 更新账户总价值（权益 = 初始资金 + 已实现盈亏 + 未实现盈亏 - 手续费）
             account = self.accounts[trader_id]
             account['unrealized_pnl'] = total_unrealized
+            
+            # 🔧 修复：同步 margin_used 为实际持仓的保证金总和
+            if account['margin_used'] != total_margin:
+                print(f"  🔧 [修复] {account['name']} margin_used 不同步：{account['margin_used']:.2f} -> {total_margin:.2f}", flush=True)
+                account['margin_used'] = total_margin
+            
             # 正确的计算：总价值 = 初始资金 - 已付手续费 + 盈亏
             account['total_value'] = self.initial_balance - account['fees'] + account['realized_pnl'] + total_unrealized
             account['profit_loss_percent'] = ((account['total_value'] - self.initial_balance) / self.initial_balance) * 100
@@ -291,6 +301,35 @@ class LeverageEngine:
         """清算持仓"""
         print(f"⚠️ {symbol} 触发清算！", flush=True)
         self.close_position(trader_id, symbol, current_price, reason="清算")
+    
+    def fix_margin_used_all(self):
+        """
+        修复所有账户的 margin_used，使其与实际持仓的保证金总和一致
+        用于修复历史数据问题
+        """
+        print("\n🔧 开始修复所有账户的 margin_used...", flush=True)
+        for trader_id, positions in self.positions.items():
+            if trader_id not in self.accounts:
+                continue
+            
+            account = self.accounts[trader_id]
+            old_margin = account['margin_used']
+            
+            # 重新计算实际保证金
+            actual_margin = sum(pos.get('margin', 0) for pos in positions.values())
+            
+            if old_margin != actual_margin:
+                print(f"  🔧 [{account['name']}] margin_used 修复：${old_margin:.2f} -> ${actual_margin:.2f}", flush=True)
+                print(f"      持仓数量：{len(positions)}，实际保证金总和：${actual_margin:.2f}", flush=True)
+                account['margin_used'] = actual_margin
+                
+                # 显示修复后的可用现金
+                available = account['cash'] - account['margin_used']
+                print(f"      修复后可用现金：${available:.2f}", flush=True)
+            else:
+                print(f"  ✅ [{account['name']}] margin_used 正确：${old_margin:.2f}", flush=True)
+        
+        print("🔧 margin_used 修复完成\n", flush=True)
     
     def get_account(self, trader_id):
         """获取账户信息"""
