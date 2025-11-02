@@ -270,6 +270,53 @@ Realized P&L: {realized_pnl:.2f}
         sharpe = account.get('sharpe', None)
         prompt += f"\nSharpe Ratio: {sharpe if sharpe is not None else 'N/A'}\n"
         
+        # 添加历史交易记录（最近20条）
+        all_trades = self.engine.get_trades(100)
+        # 过滤出当前交易员的交易记录
+        my_trades = [t for t in all_trades if t.get('trader_id') == self.trader_id][:20]
+        
+        if my_trades:
+            prompt += f"\n\nRECENT TRADING HISTORY (Latest 20 trades, newest → oldest):\n"
+            for i, trade in enumerate(my_trades, 1):
+                action = trade.get('action', 'unknown')
+                symbol = trade.get('symbol', '')
+                side = trade.get('side', '')
+                price = trade.get('price', 0)
+                quantity = trade.get('quantity', 0)
+                leverage = trade.get('leverage', 1)
+                datetime_str = trade.get('datetime', '')
+                reason = trade.get('reason', '')
+                
+                # 如果是平仓，尝试获取盈亏信息
+                pnl_info = ""
+                if 'close' in action:
+                    # 从reason中提取盈亏信息（如果有的话）
+                    if 'PnL' in reason or 'pnl' in reason.lower():
+                        pnl_info = f" | {reason}"
+                    else:
+                        pnl_info = f" | Reason: {reason}" if reason else ""
+                else:
+                    pnl_info = f" | Reason: {reason}" if reason else ""
+                
+                trade_line = f"  {i}. [{datetime_str}] {action.upper()} {symbol} {side} | Price: ${price:.2f} | Qty: {quantity:.6f} | Leverage: {leverage}x{pnl_info}"
+                prompt += trade_line + "\n"
+        else:
+            prompt += "\n\nNo trading history yet.\n"
+        
+        # 添加额外的账户统计信息
+        trades_count = account.get('trades_count', 0)
+        win_count = account.get('win_count', 0)
+        loss_count = account.get('loss_count', 0)
+        win_rate = (win_count / (win_count + loss_count) * 100) if (win_count + loss_count) > 0 else 0
+        
+        prompt += f"""
+TRADING STATISTICS:
+Total Trades: {trades_count}
+Winning Trades: {win_count}
+Losing Trades: {loss_count}
+Win Rate: {win_rate:.1f}%
+"""
+        
         # 不添加额外的输出格式说明，让AI自然响应
         
         return prompt
