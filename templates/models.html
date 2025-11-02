@@ -11,7 +11,7 @@
     <link rel="manifest" href="/static/site.webmanifest">
     
     <!-- SEO Meta Tags -->
-    <meta name="description" content="Trigo Nexus AI Trading Models - Compare Edition 1 and Edition 2 performance">
+    <meta name="description" content="Trigo Nexus AI Trading Models - Compare Edition 1 and Edition 1.1 performance">
     <meta name="keywords" content="AI trading, crypto trading, QWEN3, DeepSeek, trading models">
     
     <link rel="stylesheet" href="/static/css/style.css?v=20251026040">
@@ -298,15 +298,33 @@
             <div class="logo-area">
                 <h1 class="logo">Trigo Nexus</h1>
             </div>
-            <nav class="main-nav">
-                <a href="/edition1" class="nav-item">EDITION1</a>
-                <span class="nav-sep">|</span>
-                <a href="/edition2" class="nav-item">EDITION2</a>
-                <span class="nav-sep">|</span>
-                <a href="/models" class="nav-item active">MODELS</a>
-            </nav>
+            <button class="hamburger-btn" id="hamburgerBtn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         </div>
     </header>
+
+    <!-- 侧边栏菜单 -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>MENU</h2>
+            <button class="sidebar-close" id="sidebarClose">×</button>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/edition2" class="sidebar-item">
+                <span>Edition 1</span>
+            </a>
+            <a href="/edition1.5" class="sidebar-item">
+                <span>Edition 1.5</span>
+            </a>
+            <a href="/models" class="sidebar-item active">
+                <span>MODELS</span>
+            </a>
+        </nav>
+    </div>
 
     <div class="models-container">
         <!-- Header -->
@@ -324,10 +342,10 @@
             <div id="edition1Grid" class="models-grid"></div>
         </div>
 
-        <!-- Edition 2 Section -->
+        <!-- Edition 1.1 Section -->
         <div id="edition2Section" class="edition-section" style="display:none;">
             <div class="edition-title">
-                <span>Edition 2</span>
+                <span>Edition 1.1</span>
                 <span class="edition-badge e2">With News 📰</span>
             </div>
             <div id="edition2Grid" class="models-grid"></div>
@@ -340,6 +358,53 @@
     </div>
 
     <script>
+        // 汉堡菜单功能
+        document.addEventListener('DOMContentLoaded', () => {
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            const sidebarClose = document.getElementById('sidebarClose');
+
+            const openSidebar = () => {
+                sidebar.classList.add('active');
+                sidebarOverlay.classList.add('active');
+                hamburgerBtn.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            };
+
+            const closeSidebar = () => {
+                sidebar.classList.remove('active');
+                sidebarOverlay.classList.remove('active');
+                hamburgerBtn.classList.remove('active');
+                document.body.style.overflow = '';
+            };
+
+            if (hamburgerBtn) {
+                hamburgerBtn.addEventListener('click', () => {
+                    if (sidebar.classList.contains('active')) {
+                        closeSidebar();
+                    } else {
+                        openSidebar();
+                    }
+                });
+            }
+
+            if (sidebarClose) {
+                sidebarClose.addEventListener('click', closeSidebar);
+            }
+
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', closeSidebar);
+            }
+
+            // ESC键关闭侧边栏
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && sidebar.classList.contains('active')) {
+                    closeSidebar();
+                }
+            });
+        });
+
         // 格式化数字
         function formatNumber(num) {
             if (num >= 1000000) {
@@ -396,7 +461,7 @@
                     return;
                 }
                 
-                // 分组：Edition 1 和 Edition 2
+                // 分组：Edition 1 和 Edition 1.1
                 const edition1Models = [];
                 const edition2Models = [];
                 
@@ -411,7 +476,7 @@
                 });
                 
                 console.log('Edition 1 models:', edition1Models.length, edition1Models);
-                console.log('Edition 2 models:', edition2Models.length, edition2Models);
+                console.log('Edition 1.1 models:', edition2Models.length, edition2Models);
                 
                 // 显示调试信息在页面上
                 // 清空容器

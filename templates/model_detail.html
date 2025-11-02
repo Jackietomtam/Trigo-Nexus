@@ -49,15 +49,33 @@
             <div class="logo-area">
                 <h1 class="logo">Trigo Nexus</h1>
             </div>
-            <nav class="main-nav">
-                <a href="/edition1" class="nav-item">EDITION1</a>
-                <span class="nav-sep">|</span>
-                <a href="/edition2" class="nav-item">EDITION2</a>
-                <span class="nav-sep">|</span>
-                <a href="/models" class="nav-item active">MODELS</a>
-            </nav>
+            <button class="hamburger-btn" id="hamburgerBtn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         </div>
     </header>
+
+    <!-- 侧边栏菜单 -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>MENU</h2>
+            <button class="sidebar-close" id="sidebarClose">×</button>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/edition2" class="sidebar-item">
+                <span>Edition 1</span>
+            </a>
+            <a href="/edition1.5" class="sidebar-item">
+                <span>Edition 1.5</span>
+            </a>
+            <a href="/models" class="sidebar-item active">
+                <span>MODELS</span>
+            </a>
+        </nav>
+    </div>
 
     <div style="max-width:1400px;margin:0 auto;padding:15px 20px;">
         <a href="/models" class="back-btn">← BACK TO MODELS</a>
@@ -65,6 +83,53 @@
     </div>
 
     <script>
+    // 汉堡菜单功能
+    document.addEventListener('DOMContentLoaded', () => {
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const sidebarClose = document.getElementById('sidebarClose');
+
+        const openSidebar = () => {
+            sidebar.classList.add('active');
+            sidebarOverlay.classList.add('active');
+            hamburgerBtn.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        };
+
+        const closeSidebar = () => {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+            hamburgerBtn.classList.remove('active');
+            document.body.style.overflow = '';
+        };
+
+        if (hamburgerBtn) {
+            hamburgerBtn.addEventListener('click', () => {
+                if (sidebar.classList.contains('active')) {
+                    closeSidebar();
+                } else {
+                    openSidebar();
+                }
+            });
+        }
+
+        if (sidebarClose) {
+            sidebarClose.addEventListener('click', closeSidebar);
+        }
+
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', closeSidebar);
+        }
+
+        // ESC键关闭侧边栏
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && sidebar.classList.contains('active')) {
+                closeSidebar();
+            }
+        });
+    });
+
     async function api(u){ 
         const r=await fetch(u); 
         const text = await r.text();
@@ -108,8 +173,8 @@
 
             // Edition badge
             const editionBadge = data.edition === '2' 
-                ? '<span style="display:inline-block;background:#00d4ff;color:#000;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:0.5px;margin-left:10px;vertical-align:middle;">EDITION 2 📰</span>'
-                : '<span style="display:inline-block;background:#00ff88;color:#000;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:0.5px;margin-left:10px;vertical-align:middle;">EDITION 1</span>';
+                ? '<span style="display:inline-block;background:#00ff88;color:#000;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:0.5px;margin-left:10px;vertical-align:middle;">EDITION 1</span>'
+                : '<span style="display:inline-block;background:#00d4ff;color:#000;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:0.5px;margin-left:10px;vertical-align:middle;">EDITION 1.5</span>';
             
             let h = `
                 <div style="background:#0a0a0a;border:1px solid #1a1a1a;border-radius:12px;padding:24px;margin-bottom:24px;">

@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- Primary Meta Tags -->
-    <title>Trigo Nexus - AI Crypto Trading Platform | Live Trading Competition</title>
-    <meta name="title" content="Trigo Nexus - AI Crypto Trading Platform | Live Trading Competition">
+    <title>Trigo Nexus - Edition 1 | AI Crypto Trading Platform</title>
+    <meta name="title" content="Trigo Nexus - AI Crypto Trading Platform">
     <meta name="description" content="Watch advanced AI models trade cryptocurrencies in real-time. DeepSeek V3.2 and Qwen3 compete using sophisticated trading algorithms on BTC, ETH, SOL, BNB, DOGE, and XRP.">
-    <meta name="keywords" content="AI trading, cryptocurrency, Bitcoin, Ethereum, algorithmic trading, crypto bots, DeepSeek, Qwen, live trading, crypto competition">
+    <meta name="keywords" content="AI trading, cryptocurrency, Bitcoin, Ethereum, algorithmic trading, crypto bots, DeepSeek, Qwen, crypto competition">
     <meta name="author" content="Trigo Nexus">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://trigonexus.us/">
@@ -71,16 +71,33 @@
             <div class="logo-area">
                 <h1 class="logo">Trigo Nexus</h1>
             </div>
-            <nav class="main-nav">
-                <a href="/edition1" class="nav-item" id="navEdition1">EDITION1</a>
-                <span class="nav-sep">|</span>
-                <a href="/edition2" class="nav-item active" id="navEdition2">EDITION2</a>
-                <span class="nav-sep">|</span>
-                <a href="/models" class="nav-item" id="navModels">MODELS</a>
-            </nav>
-            <!-- 操作按钮已取消 -->
+            <button class="hamburger-btn" id="hamburgerBtn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         </div>
     </header>
+
+    <!-- 侧边栏菜单 -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>MENU</h2>
+            <button class="sidebar-close" id="sidebarClose">×</button>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/edition2" class="sidebar-item active">
+                <span>Edition 1</span>
+            </a>
+            <a href="/edition1.5" class="sidebar-item">
+                <span>Edition 1.5</span>
+            </a>
+            <a href="/models" class="sidebar-item">
+                <span>MODELS</span>
+            </a>
+        </nav>
+    </div>
 
     <!-- 价格滚动条 -->
     <div class="ticker-bar">
@@ -107,7 +124,7 @@
                         <button class="ctrl-chart" data-time="4h">4H</button>
                     </div>
                 </div>
-                <h2 class="chart-title">TOTAL ACCOUNT VALUE <span style="color: #00ff88; font-size: 0.6em;">[EDITION 2]</span></h2>
+                <h2 class="chart-title">TOTAL ACCOUNT VALUE <span style="color: #00ff88; font-size: 0.6em;">[EDITION 1]</span></h2>
                 <div class="chart-wrapper">
                     <canvas id="mainChart"></canvas>
                 </div>

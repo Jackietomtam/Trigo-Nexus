@@ -358,11 +358,18 @@ def trading_loop_edition2():
             time.sleep(10)
 
 # ========================================
-# 路由 - Edition 1
+# 路由 - Edition 1 (原Edition 2)
 # ========================================
-@app.route('/edition1')
-@app.route('/')  # 默认跳转到Edition1
-def edition1_page():
+@app.route('/')  # 默认跳转到Edition 1
+def home_page():
+    return render_template('edition2.html')
+
+# ========================================
+# 路由 - Edition 1.5 (原Edition 1，增强版)
+# ========================================
+@app.route('/edition1.5')
+@app.route('/edition1')  # 兼容旧链接
+def edition15_page():
     return render_template('edition1.html')
 
 @app.route('/api/edition1/prices')

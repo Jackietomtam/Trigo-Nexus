@@ -39,15 +39,33 @@
             <div class="logo-area">
                 <h1 class="logo">Trigo Nexus</h1>
             </div>
-            <nav class="main-nav">
-                <a href="/edition1" class="nav-item">EDITION1</a>
-                <span class="nav-sep">|</span>
-                <a href="/edition2" class="nav-item">EDITION2</a>
-                <span class="nav-sep">|</span>
-                <a href="/models" class="nav-item active">MODELS</a>
-            </nav>
+            <button class="hamburger-btn" id="hamburgerBtn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         </div>
     </header>
+
+    <!-- 侧边栏菜单 -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>MENU</h2>
+            <button class="sidebar-close" id="sidebarClose">×</button>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/edition2" class="sidebar-item">
+                <span>Edition 1</span>
+            </a>
+            <a href="/edition1.5" class="sidebar-item">
+                <span>Edition 1.5</span>
+            </a>
+            <a href="/models" class="sidebar-item active">
+                <span>MODELS</span>
+            </a>
+        </nav>
+    </div>
 
     <div class="models-container">
         <h1 style="text-align:center;margin-bottom:40px;color:#0ff;">AI MODELS [NEW - NO CACHE]</h1>
@@ -67,10 +85,10 @@
             <div id="edition1Grid" class="models-grid"></div>
         </div>
 
-        <!-- Edition 2 Section -->
+        <!-- Edition 1.1 Section -->
         <div id="edition2Section" class="edition-section">
             <div class="edition-title">
-                <span>Edition 2</span>
+                <span>Edition 1.1</span>
                 <span class="edition-badge e2">With News 📰</span>
             </div>
             <div id="edition2Grid" class="models-grid"></div>
@@ -78,6 +96,53 @@
     </div>
 
     <script>
+        // 汉堡菜单功能
+        document.addEventListener('DOMContentLoaded', () => {
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            const sidebarClose = document.getElementById('sidebarClose');
+
+            const openSidebar = () => {
+                sidebar.classList.add('active');
+                sidebarOverlay.classList.add('active');
+                hamburgerBtn.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            };
+
+            const closeSidebar = () => {
+                sidebar.classList.remove('active');
+                sidebarOverlay.classList.remove('active');
+                hamburgerBtn.classList.remove('active');
+                document.body.style.overflow = '';
+            };
+
+            if (hamburgerBtn) {
+                hamburgerBtn.addEventListener('click', () => {
+                    if (sidebar.classList.contains('active')) {
+                        closeSidebar();
+                    } else {
+                        openSidebar();
+                    }
+                });
+            }
+
+            if (sidebarClose) {
+                sidebarClose.addEventListener('click', closeSidebar);
+            }
+
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', closeSidebar);
+            }
+
+            // ESC键关闭侧边栏
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && sidebar.classList.contains('active')) {
+                    closeSidebar();
+                }
+            });
+        });
+
         console.log('=== NEW MODELS PAGE - NO CACHE ===');
         console.log('Timestamp:', new Date().toISOString());
         
@@ -105,9 +170,9 @@
                 const e1 = models.filter(m => String(m.edition) === '1');
                 console.log('Edition 1:', e1);
                 
-                // Edition 2
+                // Edition 1.1
                 const e2 = models.filter(m => String(m.edition) === '2');
-                console.log('Edition 2:', e2);
+                console.log('Edition 1.1:', e2);
                 
                 // Render
                 renderModels(e1, 'edition1Grid');
