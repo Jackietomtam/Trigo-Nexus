@@ -73,11 +73,11 @@ MODEL_SLUGS = {
 }
 
 def initialize_traders_edition1():
-    """初始化Edition 1交易员"""
+    """初始化Edition 1.5交易员（带新闻功能）"""
     global ai_traders_e1
     ai_traders_e1 = []
     
-    print("\n📦 初始化 Edition 1 交易员...")
+    print("\n📦 初始化 Edition 1.5 交易员（带新闻功能）...")
     for model_config in AI_MODELS:
         trader_id = model_config['id']
         leverage_engine_e1.create_account(trader_id, model_config['name'])
@@ -89,12 +89,13 @@ def initialize_traders_edition1():
             model=model_config['model'],
             leverage_engine=leverage_engine_e1,
             kline_data=kline_data_e1,
-            order_manager=order_manager_e1
+            order_manager=order_manager_e1,
+            news_api=news_api  # Edition 1.5 也使用新闻API
         )
         ai_traders_e1.append(trader)
         print(f"  ✓ {model_config['name']} ({model_config['model']})")
     
-    print(f"✓ Edition 1: 已初始化 {len(ai_traders_e1)} 个AI交易员")
+    print(f"✓ Edition 1.5: 已初始化 {len(ai_traders_e1)} 个AI交易员（带新闻）")
 
 def initialize_traders_edition2():
     """初始化Edition 2交易员（带新闻功能）"""

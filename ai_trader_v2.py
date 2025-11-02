@@ -11,7 +11,7 @@ from config import OPENROUTER_API_KEY, DASHSCOPE_API_KEY, DASHSCOPE_DEEPSEEK_API
 class AITraderV2:
     """AI交易代理 - 杠杆版本"""
     
-    def __init__(self, trader_id, name, strategy, model, leverage_engine, kline_data, order_manager, temperature=0.3):
+    def __init__(self, trader_id, name, strategy, model, leverage_engine, kline_data, order_manager, temperature=0.3, news_api=None):
         self.trader_id = trader_id
         self.name = name
         self.strategy = strategy
@@ -25,6 +25,14 @@ class AITraderV2:
         self.invocations = 0
         # AI参数（Edition 1默认0.3保守，Edition 2可以自定义）
         self.temperature = temperature
+        # 新闻API（可选，Edition 1.5也可以使用）
+        self.news_api = news_api
+        # 新闻缓存（1分钟缓存，确保实时性）
+        self.news_cache = {
+            'data': None,
+            'timestamp': 0,
+            'expiry': 60  # 1分钟缓存
+        }
         
     def make_decision(self):
         """做出交易决策"""
@@ -78,7 +86,28 @@ class AITraderV2:
         mins = int((time.time() - self.start_ts) / 60)
         now_str = time.strftime('%Y-%m-%d %H:%M:%S.%f', time.localtime())
 
-        prompt = f"""It has been {mins} minutes since you started trading. The current time is {now_str} and you've been invoked {self.invocations} times. Below, we are providing you with a variety of state data, price data, and predictive signals so you can discover alpha. Below that is your current account information, value, performance, positions, etc.
+        prompt = f"""🎯 ROLE & MANDATE:
+You are a PROFESSIONAL cryptocurrency trader managing real capital with significant leverage. Your primary responsibilities are:
+
+1. RISK MANAGEMENT IS PARAMOUNT - Preserve capital above all else
+2. Every trade must be thoroughly analyzed and justified
+3. Use rigorous technical and fundamental analysis before executing
+4. Consider market conditions, volatility, and risk/reward ratios carefully
+5. Avoid impulsive decisions - patience is crucial for profitability
+6. Implement strict stop-losses and take-profit levels for every position
+7. Never risk more than planned on a single trade
+8. Be prepared to exit positions quickly if conditions change
+
+⚠️ CRITICAL TRADING PRINCIPLES:
+- Think like a professional fund manager, not a gambler
+- Each decision should have a clear rationale and risk assessment
+- Quality over quantity - fewer high-conviction trades are better
+- Protect your downside first, profits will follow
+- When in doubt, stay out or reduce position size
+
+---
+
+It has been {mins} minutes since you started trading. The current time is {now_str} and you've been invoked {self.invocations} times. Below, we are providing you with a variety of state data, price data, and predictive signals so you can discover alpha. Below that is your current account information, value, performance, positions, etc.
 
 ALL OF THE PRICE OR SIGNAL DATA BELOW IS ORDERED: OLDEST → NEWEST
 
@@ -267,6 +296,16 @@ Realized P&L: {realized_pnl:.2f}
         else:
             prompt += "\n\nNo current positions.\n"
 
+        # 添加新闻（如果有news_api）
+        if self.news_api:
+            try:
+                recent_news = self._get_recent_news(minutes=3)
+                if recent_news:
+                    prompt += recent_news
+                    print(f"  📰 [{self.name}] 新闻已整合到prompt中", flush=True)
+            except Exception as e:
+                print(f"  ⚠️  [{self.name}] 新闻获取失败: {e}", flush=True)
+        
         sharpe = account.get('sharpe', None)
         prompt += f"\nSharpe Ratio: {sharpe if sharpe is not None else 'N/A'}\n"
         
@@ -720,4 +759,77 @@ Win Rate: {win_rate:.1f}%
             self.chat_history = self.chat_history[-30:]
         
         print(f"💬 {self.name}: {analysis[:80]}...", flush=True)
+    
+    def _get_recent_news(self, minutes: int = 3):
+        """
+        获取最近N分钟的原始新闻（不做任何AI分析）
+        默认3分钟窗口，确保新闻实时性
+            
+        Returns:
+            格式化的原始新闻列表，如果没有新闻返回None
+        """
+        from datetime import datetime, timedelta
+        
+        now = time.time()
+        
+        # 检查缓存（1分钟缓存，确保新闻及时更新）
+        if (self.news_cache['data'] is not None and 
+            now - self.news_cache['timestamp'] < self.news_cache['expiry']):
+            # 即使返回缓存，也要重新计算时间窗口
+            cached_data = self.news_cache['data']
+            if cached_data:
+                return cached_data
+        
+        try:
+            # 获取最新新闻
+            news_items = self.news_api.get_latest_news(limit=20)
+            
+            if not news_items:
+                self.news_cache['data'] = None
+                self.news_cache['timestamp'] = now
+                return None
+            
+            # 过滤最近N分钟的新闻
+            cutoff_time = datetime.now() - timedelta(minutes=minutes)
+            recent_news = []
+            
+            for item in news_items:
+                try:
+                    # 解析新闻时间
+                    news_time_str = item.get('time', '')
+                    news_time = datetime.strptime(news_time_str, '%Y-%m-%d %H:%M')
+                    
+                    if news_time >= cutoff_time:
+                        recent_news.append(item)
+                except Exception:
+                    continue
+            
+            # 如果没有最近N分钟的新闻，显示最新的5条
+            if not recent_news:
+                recent_news = news_items[:5]
+            
+            # 格式化原始新闻列表
+            summary = f"\n\nRECENT NEWS (Past {minutes} Minutes)\n\n"
+            summary += f"Total news items: {len(recent_news)}\n\n"
+            
+            for i, item in enumerate(recent_news[:10], 1):  # 最多10条
+                summary += f"{i}. [{item['time']}] {item['title']}\n"
+                summary += f"   Source: {item['source']}"
+                
+                # 添加相关币种标签
+                categories = item.get('categories', [])
+                crypto_tags = [c for c in categories if c in ['BTC', 'ETH', 'SOL', 'BNB', 'DOGE', 'XRP']]
+                if crypto_tags:
+                    summary += f" | Related: {', '.join(crypto_tags)}"
+                summary += "\n"
+            
+            # 更新缓存
+            self.news_cache['data'] = summary
+            self.news_cache['timestamp'] = now
+            
+            return summary
+            
+        except Exception as e:
+            print(f"  ⚠️  新闻API错误: {e}", flush=True)
+            return None
 
