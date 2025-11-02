@@ -314,11 +314,8 @@
             <button class="sidebar-close" id="sidebarClose">×</button>
         </div>
         <nav class="sidebar-nav">
-            <a href="/edition2" class="sidebar-item">
+            <a href="/" class="sidebar-item">
                 <span>Edition 1</span>
-            </a>
-            <a href="/edition1.5" class="sidebar-item">
-                <span>Edition 1.5</span>
             </a>
             <a href="/models" class="sidebar-item active">
                 <span>MODELS</span>
@@ -331,15 +328,6 @@
         <!-- Loading State -->
         <div id="loadingState" class="loading">
             <div>Loading AI models...</div>
-        </div>
-
-        <!-- Edition 1.5 Section -->
-        <div id="edition1Section" class="edition-section" style="display:none;">
-            <div class="edition-title">
-                <span>Edition 1.5</span>
-                <span class="edition-badge e1">With News 📰</span>
-            </div>
-            <div id="edition1Grid" class="models-grid"></div>
         </div>
 
         <!-- Edition 1 Section -->
@@ -461,44 +449,25 @@
                     return;
                 }
                 
-                // 分组：Edition 1 和 Edition 1.1
-                const edition1Models = [];
-                const edition2Models = [];
+                // 只显示Edition 1（edition === '2'）
+                const edition1Models = models.filter(model => String(model.edition).trim() === '2');
                 
-                // 手动分组，确保类型匹配
-                models.forEach(model => {
-                    const edition = String(model.edition).trim();
-                    if (edition === '1') {
-                        edition1Models.push(model);
-                    } else if (edition === '2') {
-                        edition2Models.push(model);
-                    }
-                });
+                console.log('Edition 1 models:', edition1Models.length, edition1Models);
                 
-                console.log('Edition 1.5 models:', edition1Models.length, edition1Models);
-                console.log('Edition 1 models:', edition2Models.length, edition2Models);
-                
-                // 显示调试信息在页面上
                 // 清空容器
-                document.getElementById('edition1Grid').innerHTML = '';
                 document.getElementById('edition2Grid').innerHTML = '';
                 
                 // 渲染并显示
                 if (edition1Models.length > 0) {
-                    renderModels(edition1Models, 'edition1Grid', false);
-                    document.getElementById('edition1Section').style.display = 'block';
-                }
-                
-                if (edition2Models.length > 0) {
-                    renderModels(edition2Models, 'edition2Grid', true);
+                    renderModels(edition1Models, 'edition2Grid', true);
                     document.getElementById('edition2Section').style.display = 'block';
                 }
                 
                 document.getElementById('loadingState').style.display = 'none';
                 
                 // 显示调试信息
-                if (models.length !== 4) {
-                    alert('警告：期望4个模型，但收到 ' + models.length + ' 个模型。请查看控制台日志。');
+                if (edition1Models.length !== 2) {
+                    alert('警告：期望2个模型，但收到 ' + edition1Models.length + ' 个模型。请查看控制台日志。');
                 }
                 
             } catch (error) {

@@ -55,11 +55,8 @@
             <button class="sidebar-close" id="sidebarClose">×</button>
         </div>
         <nav class="sidebar-nav">
-            <a href="/edition2" class="sidebar-item">
+            <a href="/" class="sidebar-item">
                 <span>Edition 1</span>
-            </a>
-            <a href="/edition1.5" class="sidebar-item">
-                <span>Edition 1.5</span>
             </a>
             <a href="/models" class="sidebar-item active">
                 <span>MODELS</span>
@@ -76,15 +73,6 @@
             <div class="debug-info" id="debugInfo">Loading...</div>
         </details>
         
-        <!-- Edition 1.5 Section -->
-        <div id="edition1Section" class="edition-section">
-            <div class="edition-title">
-                <span>Edition 1.5</span>
-                <span class="edition-badge e1">With News 📰</span>
-            </div>
-            <div id="edition1Grid" class="models-grid"></div>
-        </div>
-
         <!-- Edition 1 Section -->
         <div id="edition2Section" class="edition-section">
             <div class="edition-title">
@@ -166,16 +154,11 @@
                 console.log('Total models:', models.length);
                 console.log('Models:', models);
                 
-                // Edition 1.5
-                const e1 = models.filter(m => String(m.edition) === '1');
-                console.log('Edition 1.5:', e1);
-                
-                // Edition 1
+                // 只显示Edition 1（edition === '2'）
                 const e2 = models.filter(m => String(m.edition) === '2');
                 console.log('Edition 1:', e2);
                 
                 // Render
-                renderModels(e1, 'edition1Grid');
                 renderModels(e2, 'edition2Grid');
                 
             } catch (error) {

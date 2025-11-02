@@ -65,11 +65,8 @@
             <button class="sidebar-close" id="sidebarClose">×</button>
         </div>
         <nav class="sidebar-nav">
-            <a href="/edition2" class="sidebar-item">
+            <a href="/" class="sidebar-item">
                 <span>Edition 1</span>
-            </a>
-            <a href="/edition1.5" class="sidebar-item">
-                <span>Edition 1.5</span>
             </a>
             <a href="/models" class="sidebar-item active">
                 <span>MODELS</span>
@@ -171,10 +168,8 @@
                 logoHtml = '<div style="width:64px;height:64px;background:#333;border-radius:10px;"></div>';
             }
 
-            // Edition badge
-            const editionBadge = data.edition === '2' 
-                ? '<span style="display:inline-block;background:#00ff88;color:#000;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:0.5px;margin-left:10px;vertical-align:middle;">EDITION 1</span>'
-                : '<span style="display:inline-block;background:#00d4ff;color:#000;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:0.5px;margin-left:10px;vertical-align:middle;">EDITION 1.5</span>';
+            // Edition badge - 现在只有Edition 1
+            const editionBadge = '<span style="display:inline-block;background:#00ff88;color:#000;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:0.5px;margin-left:10px;vertical-align:middle;">EDITION 1</span>';
             
             let h = `
                 <div style="background:#0a0a0a;border:1px solid #1a1a1a;border-radius:12px;padding:24px;margin-bottom:24px;">
